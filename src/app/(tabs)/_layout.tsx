@@ -41,24 +41,24 @@ const TabsNavigation = () => {
 		<>
 			<Tabs
 				screenOptions={{
-					tabBarActiveTintColor: colors.primary,
-					tabBarInactiveTintColor: colors.textMuted,
-					tabBarLabelStyle: {
-						fontSize: 11,
-						fontWeight: '500',
-					},
-					headerShown: false,
-					tabBarStyle: {
-						position: 'absolute',
-						borderTopLeftRadius: 20,
-						borderTopRightRadius: 20,
-						borderTopWidth: 0,
-						paddingTop: 6,
-						backgroundColor: 'transparent',
-					},
-					tabBarBackground: () => <TabBarBackground tint={blurTint} />,
-				}}
-			>
+				tabBarActiveTintColor: colors.primary,
+				tabBarInactiveTintColor: colors.textMuted,
+				tabBarLabelStyle: {
+					fontSize: 11,
+					fontWeight: '500',
+				},
+				headerShown: false,
+				tabBarStyle: {
+					position: 'absolute',
+					borderTopLeftRadius: 20,
+					borderTopRightRadius: 20,
+					borderTopWidth: 0,
+					paddingTop: 6,
+					backgroundColor: 'transparent',
+				},
+				tabBarBackground: () => <TabBarBackground tint={blurTint} />,
+			}}
+		>
 				<Tabs.Screen
 					name="(songs)"
 					options={{
@@ -92,6 +92,15 @@ const TabsNavigation = () => {
 						title: i18n.t('appTab.search'),
 						tabBarIcon: ({ color, focused }) => (
 							<Ionicons name={focused ? 'search' : 'search-outline'} size={24} color={color} />
+						),
+					}}
+				/>
+				<Tabs.Screen
+					name="mine"
+					options={{
+						title: i18n.t('appTab.mine', '我的'),
+						tabBarIcon: ({ color, focused }) => (
+							<Ionicons name={focused ? 'person' : 'person-outline'} size={24} color={color} />
 						),
 					}}
 				/>
