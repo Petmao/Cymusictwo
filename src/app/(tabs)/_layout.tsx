@@ -30,34 +30,37 @@ const TabsNavigation = () => {
 	const { bottom } = useSafeAreaInsets()
 	const { blurTint, colors } = useAppTheme()
 
-	const floatingPlayerStyle = useMemo(() => ({
-		position: 'absolute' as const,
-		left: 8,
-		right: 8,
-		bottom: TAB_BAR_HEIGHT + bottom + 8,
-	}), [bottom])
+	const floatingPlayerStyle = useMemo(
+		() => ({
+			position: 'absolute' as const,
+			left: 8,
+			right: 8,
+			bottom: TAB_BAR_HEIGHT + bottom + 8,
+		}),
+		[bottom],
+	)
 
 	return (
 		<>
 			<Tabs
 				screenOptions={{
-				tabBarActiveTintColor: colors.primary,
-				tabBarInactiveTintColor: colors.textMuted,
-				tabBarLabelStyle: {
-					fontSize: 11,
+					tabBarActiveTintColor: colors.primary,
+					tabBarInactiveTintColor: colors.textMuted,
+					tabBarLabelStyle: {
+						fontSize: 11,
 					fontWeight: '500',
-				},
-				headerShown: false,
-				tabBarStyle: {
-					position: 'absolute',
-					borderTopLeftRadius: 20,
-					borderTopRightRadius: 20,
-					borderTopWidth: 0,
-					paddingTop: 6,
-					backgroundColor: 'transparent',
-				},
-				tabBarBackground: () => <TabBarBackground tint={blurTint} />,
-			}}
+					},
+					headerShown: false,
+					tabBarStyle: {
+						position: 'absolute',
+						borderTopLeftRadius: 20,
+						borderTopRightRadius: 20,
+						borderTopWidth: 0,
+						paddingTop: 6,
+						backgroundColor: 'transparent',
+					},
+					tabBarBackground: () => <TabBarBackground tint={blurTint} />,
+				}}
 		>
 				<Tabs.Screen
 					name="(songs)"
@@ -77,13 +80,11 @@ const TabsNavigation = () => {
 						),
 					}}
 				/>
+				{/* 收藏 tab 从底栏隐藏：入口移至「我的 → 收藏与歌单」，路由保留可推入 */}
 				<Tabs.Screen
 					name="favorites"
 					options={{
-						title: i18n.t('appTab.favorites'),
-						tabBarIcon: ({ color, focused }) => (
-							<Ionicons name={focused ? 'heart' : 'heart-outline'} size={24} color={color} />
-						),
+						href: null,
 					}}
 				/>
 				<Tabs.Screen
