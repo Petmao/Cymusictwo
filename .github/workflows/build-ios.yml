@@ -5,6 +5,9 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-26
@@ -63,14 +66,45 @@ jobs:
           test -s ios/build/Build/Products/Release-iphoneos/CyMusic.app/user-api-preload.js
           test -d ios/build/Build/Products/Release-iphoneos/CyMusic.app/PlugIns/ShareExtension.appex
 
-      - name: Package IPA
+      - name: Install ldid
+        run: brew install ldid || true
+
+      - name: Package IPA and TIPA
         run: |
           mkdir -p Payload
           cp -r ios/build/Build/Products/Release-iphoneos/CyMusic.app Payload/
           zip -r CyMusic-unsigned.ipa Payload/
+          # TrollStore tipa：对主二进制与插件做 ldid 伪签
+          if command -v ldid >/dev/null 2>&1; then
+            ldid -S Payload/CyMusic.app/CyMusic
+            if [ -d Payload/CyMusic.app/PlugIns/ShareExtension.appex ]; then
+              ldid -S Payload/CyMusic.app/PlugIns/ShareExtension.appex/ShareExtension
+            fi
+          fi
+          rm -f CyMusic.tipa
+          zip -r CyMusic.tipa Payload/
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: CyMusic-unsigned-ipa
           path: CyMusic-unsigned.ipa
+
+      - name: Upload TrollStore tipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: CyMusic-tipa
+          path: CyMusic.tipa
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.3-cymusictwo
+          name: Cymusictwo v1.0.3（我的页 + 收藏迁移 + 设置重排版）
+          body: |
+            - 新增「我的」tab：用户区 / 金边会员卡 / 四平台导入歌单 / 六分区行
+            - 收藏 tab 移入「我的 → 收藏与歌单」，收藏列表重做为屿声风格网格封面卡
+            - 设置弹窗重排版（功能逻辑不变），音乐 tab 右上角菜单移除，入口收进设置中心
+          files: |
+            CyMusic-unsigned.ipa
+            CyMusic.tipa
