@@ -112,7 +112,7 @@ const FavoritesScreen = () => {
 					style={styles.iconBtn}
 				>
 					<Ionicons name='chevron-back' size={20} color='rgba(255,255,255,0.7)' />
-					</TouchableOpacity>
+				</TouchableOpacity>
 				<Text style={styles.topTitle}>收藏与歌单</Text>
 				<TouchableOpacity
 					activeOpacity={0.7}
@@ -120,7 +120,7 @@ const FavoritesScreen = () => {
 					style={styles.iconBtn}
 				>
 					<Ionicons name='add' size={22} color={C.pinkLight} />
-					</TouchableOpacity>
+				</TouchableOpacity>
 			</View>
 
 			{/* 搜索框 */}
@@ -161,8 +161,7 @@ const FavoritesScreen = () => {
 										style={StyleSheet.absoluteFill}
 										contentFit='cover'
 									/>
-								)
-								{/* 数量角标 */}
+								)}
 								<View style={styles.countBadge}>
 									<Text style={styles.countText}>{p.songs?.length ?? p.tracks?.length ?? 0} 首</Text>
 								</View>
