@@ -1,17 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient'
 import { Ionicons } from '@expo/vector-icons'
-import React, { useEffect, useMemo, useState } from 'react'
-import {
-	ScrollView,
-	StyleSheet,
-	Text,
-	TouchableOpacity,
-	View,
-} from 'react-native'
 import { useRouter } from 'expo-router'
+import React, { useEffect, useMemo, useState } from 'react'
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-/** 屿声配色：与 IsleColor 对齐 */
 const C = {
 	pink: '#FF5F9E',
 	pinkLight: '#FF8FBF',
@@ -34,16 +27,9 @@ const hashUid = (name: string) => {
 	return String(100000 + (h % 900000))
 }
 
-/** ---- 金色渐变文字 ---- */
-const GoldText = ({ children, size, weight }: { children: React.ReactNode; size: number; weight: '400' | '600' | '900' }) => (
-	<LinearGradient
-		colors={['#FFF2D1', '#F0CD8D', '#F5DBA3']}
-		start={{ x: 0, y: 0 }}
-		end={{ x: 1, y: 0 }}
-		style={styles.goldTextWrap}
-	>
-		<Text style={[styles.goldText, { fontSize: size, fontWeight: weight }]}>{children}</Text>
-	</LinearGradient>
+/** ---- 金色文字（纯色近似渐变） ---- */
+const GoldText = ({ children, size, weight }: { children: React.ReactNode; size: number; weight: '400' | '700' | '900' }) => (
+	<Text style={{ fontSize: size, fontWeight: weight, color: C.gold }}>{children}</Text>
 )
 
 /** ---- 1. 用户区 ---- */
@@ -107,7 +93,7 @@ const MineMemberCard = ({ onRedeem }: { onRedeem: () => void }) => (
 					style={StyleSheet.absoluteFill}
 				/>
 				<Text style={styles.redeemText}>卡密兑换</Text>
-			</TouchableOpacity>
+		</TouchableOpacity>
 		</View>
 
 		<View style={styles.benefitRow}>
@@ -115,18 +101,16 @@ const MineMemberCard = ({ onRedeem }: { onRedeem: () => void }) => (
 				<View key={t} style={styles.benefit}>
 					<Ionicons name='checkmark' size={8} color={C.gold} />
 					<Text style={styles.benefitText}>{t}</Text>
-				</View>
+			</View>
 			))}
 		</View>
 
-		{/* 金色描边 */}
 		<LinearGradient
 			colors={['rgba(240,205,141,0.95)', 'rgba(240,205,141,0.28)', 'rgba(213,164,92,0.85)']}
 			start={{ x: 0, y: 0 }}
 			end={{ x: 1, y: 1 }}
 			style={[StyleSheet.absoluteFill, styles.cardBorder]}
 		/>
-		{/* 内发光：blur 由外层 overflow 裁住 */}
 		<View style={[StyleSheet.absoluteFill, styles.cardGlow]} />
 	</View>
 )
@@ -148,13 +132,13 @@ const ImportGrid = ({ onPick }: { onPick: (p: Platform) => void }) => (
 				<TouchableOpacity key={p.key} activeOpacity={0.75} style={styles.gridCell} onPress={() => onPick(p)}>
 					<LinearGradient
 					colors={[p.c1, p.c2]}
-					start={{ x: 0, y: 0 }}
+						start={{ x: 0, y: 0 }}
 					end={{ x: 1, y: 1 }}
-					style={StyleSheet.absoluteFill}
-				/>
-				<Ionicons name={p.icon} size={17} color='#FFFFFF' />
-				<View style={{ height: 7 }} />
-				<Text style={styles.gridText} numberOfLines={1}>{p.title}</Text>
+						style={StyleSheet.absoluteFill}
+					/>
+					<Ionicons name={p.icon} size={17} color='#FFFFFF' />
+					<View style={{ height: 7 }} />
+					<Text style={styles.gridText} numberOfLines={1}>{p.title}</Text>
 			</TouchableOpacity>
 			))}
 		</View>
@@ -162,13 +146,13 @@ const ImportGrid = ({ onPick }: { onPick: (p: Platform) => void }) => (
 )
 
 /** ---- 4. 六个分区行 ---- */
-type Section = { title: string; detail: string; icon: keyof typeof Ionicons.glyphMap; tint: string; route: string }
+type Section = { title: string; detail: string; icon: keyof typeof Ionicons.glyphMap; tint: string; route: string | null }
 const SECTIONS: Section[] = [
 	{ title: '收藏与歌单', detail: '收藏的歌曲 · 我的歌单', icon: 'heart', tint: C.pink, route: '/(tabs)/favorites' },
-	{ title: '签到积分', detail: '每日签到 · 兑换会员', icon: 'gift', tint: C.gold, route: 'checkin' },
-	{ title: '邀请好友', detail: '每人 +200 积分', icon: 'people', tint: C.mint, route: 'invite' },
-	{ title: '云同步', detail: '歌单与进度', icon: 'cloud-upload', tint: '#7DA6FF', route: 'cloud' },
-	{ title: '设备管理', detail: '已绑定设备 · 解绑', icon: 'phone-portrait', tint: '#C4A6FF', route: 'device' },
+	{ title: '签到积分', detail: '每日签到 · 兑换会员', icon: 'gift', tint: C.gold, route: null },
+	{ title: '邀请好友', detail: '每人 +200 积分', icon: 'people', tint: C.mint, route: null },
+	{ title: '云同步', detail: '歌单与进度', icon: 'cloud-upload', tint: '#7DA6FF', route: null },
+	{ title: '设备管理', detail: '已绑定设备 · 解绑', icon: 'phone-portrait', tint: '#C4A6FF', route: null },
 	{ title: '设置中心', detail: '音源 · 播放 · 退出登录', icon: 'settings', tint: '#C9A6FF', route: '/(modals)/settingModal' },
 ]
 
@@ -181,7 +165,7 @@ const SectionList = ({ router }: { router: ReturnType<typeof useRouter> }) => (
 					activeOpacity={0.65}
 					style={styles.sectionRow}
 					onPress={() => {
-						if (s.route.startsWith('/')) router.push(s.route as any)
+						if (s.route) router.push(s.route as never)
 					}}
 				>
 					<View style={[styles.iconBox, { backgroundColor: s.tint + '24' }]}>
@@ -215,7 +199,6 @@ const MinePage = () => {
 
 	return (
 		<SafeAreaView style={styles.safe} edges={['top']}>
-			{/* IsleBackground：深紫黑渐变 + 双侧光 */}
 			<LinearGradient
 				colors={['#1B0A17', '#0A0509']}
 				style={StyleSheet.absoluteFill}
@@ -231,7 +214,7 @@ const MinePage = () => {
 				start={{ x: 0, y: 0 }}
 				end={{ x: 0.5, y: 0.4 }}
 				style={StyleSheet.absoluteFill}
-			/>
+		/>
 
 			<ScrollView
 				contentContainerStyle={styles.scrollContent}
@@ -248,7 +231,7 @@ const MinePage = () => {
 			<ImportGrid
 				onPick={(p) => {
 					// 复用现有导入弹窗（当前只支持 QQ，后续按 p.key 分流）
-					router.push('/(modals)/importPlayList' as any)
+					router.push('/(modals)/importPlayList' as never)
 				}}
 			/>
 			<View style={{ height: 12 }} />
@@ -310,12 +293,8 @@ const styles = StyleSheet.create({
 		borderRadius: 20,
 		borderWidth: 7,
 		borderColor: 'rgba(240,205,141,0.45)',
-		// RN 无 blur 修饰符：低透明度多层叠加近似内发光
 		opacity: 0.55,
 	},
-	goldTextWrap: { alignSelf: 'flex-start', overflow: 'hidden', borderRadius: 2 },
-	goldText: { backgroundColor: 'transparent', color: 'transparent' },
-	goldGradientText: { letterSpacing: 2 },
 
 	/* 导入歌单 */
 	sectionLabel: {
@@ -329,7 +308,7 @@ const styles = StyleSheet.create({
 		paddingVertical: 14,
 		alignItems: 'center',
 		overflow: 'hidden',
-},
+	},
 	gridText: { fontSize: 9.5, fontWeight: '600', color: 'rgba(255,255,255,0.95)' },
 
 	/* 分区行 */
