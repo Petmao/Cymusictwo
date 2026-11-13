@@ -14,12 +14,12 @@ const GlobalButton = () => {
 	return (
 		<View>
 			<MaterialCommunityIcons
-				name="menu"
-				size={27}
-				onPress={showPlayList}
-				color={colors.icon}
-				style={{ marginRight: 6 }}
-			/>
+			name="menu"
+			size={27}
+			onPress={showPlayList}
+			color={colors.icon}
+			style={{ marginRight: 6 }}
+		/>
 		</View>
 	)
 }
