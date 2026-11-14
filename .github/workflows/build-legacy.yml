@@ -41,13 +41,29 @@ jobs:
         working-directory: ios
         run: pod install
 
-      - name: Build unsigned .app
+      - name: Detect Xcode project
+        id: proj
+        working-directory: ios
         run: |
-          xcodebuild -workspace ios/CyMusic.xcworkspace \
-            -scheme CyMusic \
+          if [ -d "CyMusic.xcworkspace" ]; then
+            echo "workspace=CyMusic.xcworkspace" >> "$GITHUB_OUTPUT"
+            echo "scheme=CyMusic" >> "$GITHUB_OUTPUT"
+          elif [ -d "musicplayer.xcodeproj" ]; then
+            echo "workspace=musicplayer.xcodeproj" >> "$GITHUB_OUTPUT"
+            SCHEME=$(xcodebuild -list -project musicplayer.xcodeproj 2>/dev/null | awk '/Schemes:/{getline; print $1; exit}')
+            echo "scheme=${SCHEME:-musicplayer}" >> "$GITHUB_OUTPUT"
+          else
+            echo "No known Xcode project found" && exit 1
+          fi
+
+      - name: Build unsigned .app
+        working-directory: ios
+        run: |
+          xcodebuild -project "${{ steps.proj.outputs.workspace }}" \
+            -scheme "${{ steps.proj.outputs.scheme }}" \
             -configuration Release \
             -sdk iphoneos \
-            -derivedDataPath ios/build \
+            -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
@@ -58,17 +74,20 @@ jobs:
 
       - name: Package IPA and TIPA
         run: |
+          APP_PATH=$(find ios/build/Build/Products/Release-iphoneos -maxdepth 1 -name '*.app' | head -1)
+          test -n "$APP_PATH" || { echo 'No .app produced'; exit 1; }
           mkdir -p Payload
-          cp -r ios/build/Build/Products/Release-iphoneos/CyMusic.app Payload/
+          cp -r "$APP_PATH" Payload/
           zip -r CyMusic-legacy-unsigned.ipa Payload/
           if command -v ldid >/dev/null 2>&1; then
-            ldid -S Payload/CyMusic.app/CyMusic
-            if [ -d Payload/CyMusic.app/PlugIns ]; then
-              find Payload/CyMusic.app/PlugIns -name "*.appex" -type d | while read appex; do
+            APPBIN=$(basename "$APP_PATH" .app)
+            if [ -f "Payload/$APPBIN/$APPBIN" ]; then
+              ldid -S "Payload/$APPBIN/$APPBIN"
+            fi
+            if [ -d "Payload/$APPBIN/PlugIns" ]; then
+              find "Payload/$APPBIN/PlugIns" -name '*.appex' -type d | while read appex; do
                 bin=$(basename "$appex" .appex)
-                if [ -f "Payload/CyMusic.app/PlugIns/$(basename $appex)/$bin" ]; then
-                  ldid -S "Payload/CyMusic.app/PlugIns/$(basename $appex)/$bin"
-                fi
+                [ -f "$(dirname "$appex")/$bin" ] && ldid -S "$(dirname "$appex")/$bin"
               done
             fi
           fi
