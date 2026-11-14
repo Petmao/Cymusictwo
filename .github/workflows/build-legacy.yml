@@ -1,0 +1,103 @@
+name: Build Legacy IPA (iOS 13.4+)
+
+on:
+  push:
+    tags: ['legacy*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    env:
+      EXPO_NO_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: legacy-120
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18.20.4
+          cache: yarn
+
+      - name: Verify build tools
+        run: |
+          xcodebuild -version
+          node --version
+          yarn --version
+
+      - name: Install pinned CocoaPods
+        run: |
+          gem install cocoapods --version 1.15.2 --no-document --user-install
+          echo "$(ruby -e 'puts Gem.user_dir')/bin" >> "$GITHUB_PATH"
+
+      - name: Install dependencies
+        run: yarn install --non-interactive
+
+      - name: Install Pods
+        working-directory: ios
+        run: pod install
+
+      - name: Build unsigned .app
+        run: |
+          xcodebuild -workspace ios/CyMusic.xcworkspace \
+            -scheme CyMusic \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM=""
+
+      - name: Install ldid
+        run: brew install ldid || true
+
+      - name: Package IPA and TIPA
+        run: |
+          mkdir -p Payload
+          cp -r ios/build/Build/Products/Release-iphoneos/CyMusic.app Payload/
+          zip -r CyMusic-legacy-unsigned.ipa Payload/
+          if command -v ldid >/dev/null 2>&1; then
+            ldid -S Payload/CyMusic.app/CyMusic
+            if [ -d Payload/CyMusic.app/PlugIns ]; then
+              find Payload/CyMusic.app/PlugIns -name "*.appex" -type d | while read appex; do
+                bin=$(basename "$appex" .appex)
+                if [ -f "Payload/CyMusic.app/PlugIns/$(basename $appex)/$bin" ]; then
+                  ldid -S "Payload/CyMusic.app/PlugIns/$(basename $appex)/$bin"
+                fi
+              done
+            fi
+          fi
+          rm -f CyMusic-legacy.tipa
+          zip -r CyMusic-legacy.tipa Payload/
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: CyMusic-legacy-unsigned-ipa
+          path: CyMusic-legacy-unsigned.ipa
+
+      - name: Upload TrollStore tipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: CyMusic-legacy-tipa
+          path: CyMusic-legacy.tipa
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: legacy-1.2.0-isle
+          name: Cymusictwo legacy 1.2.0 + 屿声移植（iOS 13.4+）
+          body: |
+            基于上游 1.2.0（Expo 50，deployment target 13.4），移植屿声三项改动：
+            - 新增「我的」tab（用户区/金边会员卡/导入歌单/六分区行）
+            - 收藏 tab 移入「我的」，收藏列表网格化
+            - 设置弹窗重排版（功能逻辑不变）
+            iOS 13.4+ 可运行，兼容 iOS 15.4。
+          files: |
+            CyMusic-legacy-unsigned.ipa
+            CyMusic-legacy.tipa
