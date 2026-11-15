@@ -32,44 +32,67 @@ jobs:
       - name: Install dependencies
         run: yarn install --non-interactive
 
-      - name: Prebuild iOS project (Expo SDK 50 -> iOS 13.4)
+      - name: Prebuild iOS project (Expo SDK 50)
         run: npx expo prebuild --platform ios --clean --no-install
 
       - name: Apply patches
         run: npx patch-package
 
+      - name: Force deployment target to 13.4
+        run: |
+          node -e "
+          const fs = require('fs');
+          const p = 'ios/Podfile.properties.json';
+          const props = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : {};
+          props['ios.deploymentTarget'] = '13.4';
+          props['newArchEnabled'] = 'false';
+          fs.writeFileSync(p, JSON.stringify(props, null, 2));
+          "
+
+          perl -0pi -e "s/^platform :ios,.*\$/platform :ios, '13.4'/m" ios/Podfile
+
+          find ios -name project.pbxproj -print0 | xargs -0 perl -pi -e 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/IPHONEOS_DEPLOYMENT_TARGET = 13.4;/g'
+
+          echo '--- Podfile ---'
+          grep -n "platform :ios" ios/Podfile
+          echo '--- targets pinned to 13.4 ---'
+          find ios -name project.pbxproj -exec grep -c 'IPHONEOS_DEPLOYMENT_TARGET = 13.4' {} \;
+
       - name: Install CocoaPods
         run: |
           cd ios && pod install --repo-update
 
-      - name: Assert deployment target is 13.4
-        run: |
-          grep -q "platform :ios, '13.4'" ios/Podfile
-          grep -q 'IPHONEOS_DEPLOYMENT_TARGET = 13.4' ios/*.xcodeproj/project.pbxproj
-
       - name: Build unsigned .app
         run: |
-          xcodebuild -workspace ios/CyMusic.xcworkspace \
-            -scheme CyMusic \
+          WORKSPACE="$(ls -d ios/*.xcworkspace | head -1)"
+          SCHEME="$(basename "${WORKSPACE}" .xcworkspace)"
+          echo "workspace=${WORKSPACE} scheme=${SCHEME}"
+          rm -rf ios/build
+          xcodebuild -workspace "${WORKSPACE}" \
+            -scheme "${SCHEME}" \
             -configuration Release \
-            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             -derivedDataPath ios/build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            DEVELOPMENT_TEAM=""
+            DEVELOPMENT_TEAM="" \
+            build
 
       - name: Verify bundle contents
         run: |
-          APP=ios/build/Build/Products/Release-iphoneos/CyMusic.app
-          test -s "$APP/main.jsbundle"
-          /usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist"
-          test "$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist")" = "13.4"
+          APP="$(ls -d ios/build/Build/Products/Release-iphoneos/*.app | head -1)"
+          echo "app=${APP}"
+          test -s "${APP}/main.jsbundle"
+          MINOS="$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "${APP}/Info.plist")"
+          echo "MinimumOSVersion=${MINOS}"
+          test "${MINOS}" = "13.4"
+          echo "APP_PATH=${APP}" >> "$GITHUB_ENV"
 
       - name: Package IPA
         run: |
           mkdir -p Payload
-          cp -r ios/build/Build/Products/Release-iphoneos/CyMusic.app Payload/
+          cp -r "${APP_PATH}" Payload/
           zip -qry CyMusic-ios13.4-unsigned.ipa Payload/
 
       - name: Upload IPA
