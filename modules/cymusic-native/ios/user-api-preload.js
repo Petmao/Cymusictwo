@@ -449,7 +449,7 @@ globalThis.lx_setup = (key, id, name, description, version, author, homepage, ra
 
   }
 
-  globalThis.lxu = {
+  const lxApi = {
     EVENT_NAMES,
     request(url, { method = 'get', timeout, headers, body, form, formData, binary }, callback) {
       let options = { headers, binary: binary === true }
@@ -529,6 +529,10 @@ globalThis.lx_setup = (key, id, name, description, version, author, homepage, ra
     version: '2.0.0',
     env: 'mobile',
   }
+
+  // LX 脚本统一用 globalThis.lx；上游 preload 只挂了 lxu，导致脚本读 lx 直接 undefined
+  globalThis.lx = lxApi
+  globalThis.lxu = lxApi
 
   globalThis.setTimeout = _setTimeout
   globalThis.clearTimeout = _clearTimeout

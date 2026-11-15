@@ -522,7 +522,20 @@
 - (NSString *)stringFromJSException:(JSValue *)exception defaultMessage:(NSString *)defaultMessage {
   if (!exception || exception.isUndefined || exception.isNull) return defaultMessage;
 
-  NSString *message = [[exception toObject] description] ?: defaultMessage;
+  NSString *message = nil;
+  // JS Error 的 message/stack 都是不可枚举属性，toObject 转成 NSDictionary 会得到 "{}"，
+  // 必须直接调 toString 才能拿到 "TypeError: xxx"
+  if (exception.isObject) {
+    @try {
+      JSValue *described = [exception invokeMethod:@"toString" withArguments:@[]];
+      if (described && described.isString) message = described.toString;
+    } @catch (NSException *nsException) {
+      message = nil;
+    }
+  }
+  if (message.length == 0) message = [[exception toObject] description];
+  if (message.length == 0) message = defaultMessage;
+
   if (message.length > 1024) {
     message = [[message substringToIndex:1024] stringByAppendingString:@"..."];
   }

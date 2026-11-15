@@ -103,6 +103,28 @@ let settledRequestTypes: Map<string, LxRequestType> = new Map()
 // HTTP 请求映射（QuickJS 脚本发起的 HTTP 请求通过事件转发到 JS-land）
 let pendingHttpRequests: Map<string, AbortController> = new Map()
 
+// 脚本上报的可用来源与音质（init 事件里带回来的）
+let scriptSourceInfo: Record<string, { qualitys?: string[]; actions?: string[] }> = {}
+let warnedMissingTx = false
+
+/** 把脚本抛出来的任何形态的错误转成人能看的一句话 */
+const describeError = (value: any): string => {
+	if (value == null) return '未知错误（脚本没有给出原因）'
+	if (typeof value === 'string') return value.trim() || '未知错误（脚本返回空字符串）'
+	if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+	if (value instanceof Error) return value.message
+	const message = (value as any)?.message
+	if (typeof message === 'string' && message.trim()) return message
+	try {
+		const json = JSON.stringify(value)
+		if (json && json !== '{}' && json !== 'null') return json
+	} catch {
+		// 循环引用之类，往下走
+	}
+	const keys = value && typeof value === 'object' ? Object.keys(value) : []
+	return keys.length ? `脚本错误（${keys.join(',')}）` : '未知错误（脚本抛了空对象）'
+}
+
 // 脚本是否已初始化
 let scriptInited = false
 let scriptInitPromise: {
@@ -184,17 +206,18 @@ const handleScriptAction = (event: any) => {
 		case 'init': {
 			// 脚本初始化完成
 			const data = event.data
-			if (data.status) {
-				logInfo('[lxMusicAdapter] Script initialized successfully')
+			if (data?.status) {
+				scriptSourceInfo = (data.info?.sources ?? {}) as typeof scriptSourceInfo
+				const sourceNames = Object.keys(scriptSourceInfo)
+				logInfo(
+					`[lxMusicAdapter] Script initialized successfully, sources: ${sourceNames.join(',') || '(none)'}`,
+				)
 				scriptInited = true
 				scriptInitPromise?.resolve()
 			} else {
-				logError(
-					`[lxMusicAdapter] Script init failed: ${data.errorMessage || 'unknown'}`,
-				)
-				scriptInitPromise?.reject(
-					new Error(data.errorMessage || 'Script init failed'),
-				)
+				const reason = describeError(data?.errorMessage)
+				logError(`[lxMusicAdapter] Script init failed: ${reason}`)
+				scriptInitPromise?.reject(new Error(reason))
 			}
 			scriptInitPromise = null
 			break
@@ -257,7 +280,11 @@ const handleScriptAction = (event: any) => {
 		}
 
 		case 'log': {
-			logInfo(`[lxMusicScript] ${event.data}`)
+			// 原生日志事件把内容放在 log 字段，type 区分 log/info/warn/error
+			const type = (event as any).type ?? 'log'
+			const message = describeError((event as any).log ?? event.data)
+			if (type === 'error' || type === 'warn') logError(`[lxMusicScript][${type}] ${message}`)
+			else logInfo(`[lxMusicScript][${type}] ${message}`)
 			break
 		}
 
@@ -465,14 +492,34 @@ const getMusicUrlViaScript = (
 			requestType,
 		})
 
-		logInfo(`${logPrefix} Sending musicUrl request: ${title} - ${artist}`)
+		// 按脚本 init 时报的源来选，别硬写 tx（很多脚本只支持 kw/wy）
+		const availableSources = Object.keys(scriptSourceInfo)
+		const source = availableSources.includes('tx') ? 'tx' : (availableSources[0] ?? 'tx')
+		if (source !== 'tx' && !warnedMissingTx) {
+			warnedMissingTx = true
+			logError(
+				`[lxMusicAdapter] 该音源不支持 tx（QQ），可用源：${availableSources.join(',') || '未知'}，搜索结果来自 QQ，取链可能失败`,
+			)
+		}
+		const supportedQualitys = scriptSourceInfo[source]?.qualitys ?? []
+		const targetQuality = (() => {
+			const requested = (quality || '').toLowerCase()
+			if (supportedQualitys.includes(requested)) return requested
+			if (requested === 'flac24bit' && supportedQualitys.includes('flac')) return 'flac'
+			if (requested === 'flac' && supportedQualitys.includes('320k')) return '320k'
+			return supportedQualitys[0] ?? requested ?? '128k'
+		})()
+
+		logInfo(
+			`${logPrefix} Sending musicUrl request: ${title} - ${artist} [source=${source}][quality=${targetQuality}]`,
+		)
 
 		// 向 QuickJS 脚本发送 musicUrl 请求
 		sendAction('request', {
 			requestKey,
 			data: {
 				action: 'musicUrl',
-				source: 'tx',
+				source,
 				info: {
 					musicInfo: {
 						id: songmid,
@@ -481,14 +528,14 @@ const getMusicUrlViaScript = (
 						name: title,
 						singer: artist,
 						artist,
-						source: 'tx',
+						source,
 						hash: songmid,
 					},
 					requestContext: {
 						requestKey,
 						requestType,
 					},
-					type: quality || '128k',
+					type: targetQuality,
 				},
 			},
 		} as any)
