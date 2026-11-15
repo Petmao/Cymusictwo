@@ -17,16 +17,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode (prefer 16.2, the image the 1.2.0 release was built with)
+      - name: Select the newest Xcode 16 image (its iOS platform is preinstalled)
         run: |
-          APP=""
-          for v in 16.2 16.1 16.0; do
-            if [ -d "/Applications/Xcode_${v}.app" ]; then APP="/Applications/Xcode_${v}.app"; break; fi
-          done
-          if [ -z "$APP" ]; then APP="$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"; fi
+          APP="$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)"
           echo "Using ${APP}"
           sudo xcode-select -s "${APP}/Contents/Developer"
           xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
 
       - uses: actions/setup-node@v4
         with:
