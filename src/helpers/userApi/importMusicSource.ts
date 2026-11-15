@@ -27,7 +27,15 @@ export async function createMusicApiFromScript(rawScript: string): Promise<IMusi
 	}
 
 	if (isLxMusicScript(script)) {
-		return adaptLxMusicScript(script)
+		try {
+			return await adaptLxMusicScript(script)
+		} catch (lxError) {
+			// 同时带 CommonJS 形态的脚本，退回普通解析再试一次
+			if (!/module\s*\.\s*exports\s*\.\s*getMusicUrl/.test(script)) {
+				const message = lxError instanceof Error ? lxError.message : String(lxError)
+				throw new Error(`LX 音源解析失败：${message}`)
+			}
+		}
 	}
 
 	const module: { exports: ModuleExports } = { exports: {} }

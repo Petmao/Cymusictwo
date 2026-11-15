@@ -22,18 +22,15 @@ import { logError, logInfo } from '../logger'
 // ============================================================
 
 export const isLxMusicScript = (script: string): boolean => {
-	const isCymusicFormat = /module\s*\.\s*exports\s*\.\s*getMusicUrl/.test(script)
-	if (isCymusicFormat) return false
-
 	const hasHeader = /^\/\*[\s\S]+?\*\//.test(script.trim())
+	if (!hasHeader) return false
 	const hasLxApi =
 		/\bEVENT_NAMES\b/.test(script) ||
-		/\blx\s*\.\s*(on|send|request)\b/.test(script) ||
+		/\blx\s*\.\s*(on|send)\b/.test(script) ||
 		/\blxu?\s*\.\s*(on|send|request|EVENT_NAMES)\b/.test(script) ||
 		/\bglobalThis\s*\.\s*lx/.test(script)
-
-	// 有头部注释时按 LX 规则严格判断；缺头部时只认强特征（EVENT_NAMES / lx.request）
-	return hasHeader ? hasLxApi : /\bEVENT_NAMES\b/.test(script) || /\blx\s*\.\s*request\b/.test(script)
+	const isCymusicFormat = /module\s*\.\s*exports\s*\.\s*getMusicUrl/.test(script)
+	return hasLxApi && !isCymusicFormat
 }
 
 // ============================================================

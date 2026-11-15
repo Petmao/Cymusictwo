@@ -28,6 +28,14 @@ const App = () => {
 	useLogTrackPlayerState()
 	// myTrackPlayer.setupTrackPlayer()
 
+	// 兜底：播放器初始化任何环节抛错都不该把启动页永久卡住
+	useEffect(() => {
+		const fallback = setTimeout(() => {
+			SplashScreen.hideAsync().catch(() => {})
+		}, 4000)
+		return () => clearTimeout(fallback)
+	}, [])
+
 	LyricManager.setup()
 	const { hasShareIntent } = useShareIntentContext()
 

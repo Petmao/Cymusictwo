@@ -149,13 +149,21 @@ async function setupTrackPlayer() {
 	}
 	if (selectedMusicApi) {
 		musicApiSelectedStore.setValue(selectedMusicApi)
-		await reloadNowSelectedMusicApi()
+		try {
+			await reloadNowSelectedMusicApi()
+		} catch (error) {
+			logError('恢复音源失败，跳过:', error)
+		}
 	}
 	if (importedLocalMusic) {
 		importedLocalMusicStore.setValue(importedLocalMusic)
 	}
 	if (restoredQueue && Array.isArray(restoredQueue)) {
-		addAll(restoredQueue, undefined, repeatMode === MusicRepeatMode.SHUFFLE)
+		try {
+			addAll(restoredQueue, undefined, repeatMode === MusicRepeatMode.SHUFFLE)
+		} catch (error) {
+			logError('恢复播放队列失败，跳过:', error)
+		}
 	}
 	if (autoCacheLocal == true || autoCacheLocal == false) {
 		autoCacheLocalStore.setValue(autoCacheLocal)
@@ -690,7 +698,8 @@ const reloadNowSelectedMusicApi = async () => {
 		return reloadedApi
 	} catch (error) {
 		logError('Error reloading selected music API:', error)
-		throw error
+		// 单个音源坏掉不该让启动流程挂死，返回原始对象继续启动
+		return musicApiSelectedStore.getValue()
 	}
 }
 const reloadMusicApi = async (musicApi: IMusic.MusicApi, isTest: boolean = false): Promise<IMusic.MusicApi> => {

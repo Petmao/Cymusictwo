@@ -32,13 +32,20 @@ export const useSetupTrackPlayer = ({ onLoad }: { onLoad?: () => void }) => {
 
 		setupPlayer()
 			.then(async () => {
-				await myTrackPlayer.setupTrackPlayer()
 				isInitialized.current = true
+				try {
+					await myTrackPlayer.setupTrackPlayer()
+				} catch (error) {
+					// 恢复队列/音源失败不应该卡住启动页
+					console.error('setupTrackPlayer 恢复失败:', error)
+				}
 				onLoad?.()
 			})
 			.catch((error) => {
 				isInitialized.current = false
-				console.error(error)
+				console.error('播放器初始化失败:', error)
+				// 即使原生播放器起不来，也要放行启动页，避免永久白屏
+				onLoad?.()
 			})
 	}, [onLoad])
 }
