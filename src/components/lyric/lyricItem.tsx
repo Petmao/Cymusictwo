@@ -103,12 +103,14 @@ const createStyles = (colors: ThemeColors) =>
 	StyleSheet.create({
 	highlightItem: {
 		opacity: 1,
+		color: colors.text,
 	},
 	item: {
 		color: colors.text,
-		opacity: 0.6,
-		paddingHorizontal: rpx(64),
-		paddingVertical: rpx(24),
+		opacity: 0.5,
+		letterSpacing: -0.1,
+		paddingHorizontal: rpx(56),
+		paddingVertical: rpx(22),
 		width: '100%',
 		textAlign: 'center',
 		textAlignVertical: 'center',

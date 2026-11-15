@@ -1,8 +1,8 @@
-import { ThemeColors } from '@/constants/tokens'
+import { ThemeColors, radius, spacing, strokeWidth, typography } from '@/constants/tokens'
 import { Playlist } from '@/helpers/types'
 import { useThemeColors } from '@/hooks/useAppTheme'
 import { useDefaultStyles } from '@/styles'
-import { AntDesign } from '@expo/vector-icons'
+import { Ionicons } from '@expo/vector-icons'
 import { useMemo } from 'react'
 import { StyleSheet, Text, TouchableHighlight, TouchableHighlightProps, View } from 'react-native'
 import FastImage from 'react-native-fast-image'
@@ -16,33 +16,34 @@ export const PlaylistListItem = ({ playlist, ...props }: PlaylistListItemProps) 
 	const defaultStyles = useDefaultStyles()
 	const styles = useMemo(() => createStyles(colors, defaultStyles), [colors, defaultStyles])
 
+	const songCount = playlist.songs?.length ?? 0
+	const subtitle = songCount > 0 ? `${songCount}` : playlist.description || ''
+
 	return (
 		<TouchableHighlight activeOpacity={0.8} underlayColor={colors.surfaceMuted} {...props}>
 			<View style={styles.playlistItemContainer}>
-				<View>
+				<View style={styles.artworkWrap}>
 					<FastImage
 						source={{
-							uri: playlist.coverImg?playlist.coverImg:playlist.artwork,
+							uri: playlist.coverImg ? playlist.coverImg : playlist.artwork,
 							priority: FastImage.priority.normal,
 						}}
 						style={styles.playlistArtworkImage}
 					/>
 				</View>
 
-				<View
-					style={{
-						flexDirection: 'row',
-						justifyContent: 'space-between',
-						alignItems: 'center',
-						width: '100%',
-					}}
-				>
+				<View style={styles.textColumn}>
 					<Text numberOfLines={1} style={styles.playlistNameText}>
 						{playlist.title}
 					</Text>
-
-					<AntDesign name="right" size={16} color={colors.icon} style={{ opacity: 0.5 }} />
+					{subtitle ? (
+						<Text numberOfLines={1} style={styles.playlistMetaText}>
+							{subtitle}
+						</Text>
+					) : null}
 				</View>
+
+				<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
 			</View>
 		</TouchableHighlight>
 	)
@@ -55,19 +56,32 @@ const createStyles = (
 	StyleSheet.create({
 	playlistItemContainer: {
 		flexDirection: 'row',
-		columnGap: 14,
+		columnGap: spacing.md + 2,
 		alignItems: 'center',
-		paddingRight: 90,
+		paddingVertical: spacing.xs + 2,
+	},
+	artworkWrap: {
+		borderRadius: radius.md,
+		borderCurve: 'continuous',
+		borderWidth: strokeWidth,
+		borderColor: colors.border,
+		overflow: 'hidden',
 	},
 	playlistArtworkImage: {
-		borderRadius: 8,
-		width: 70,
-		height: 70,
+		width: 64,
+		height: 64,
+	},
+	textColumn: {
+		flex: 1,
+		justifyContent: 'center',
 	},
 	playlistNameText: {
 		...defaultStyles.text,
-		fontSize: 17,
-		fontWeight: '600',
-		maxWidth: '80%',
+		...typography.headline,
+	},
+	playlistMetaText: {
+		...typography.caption,
+		color: colors.textMuted,
+		marginTop: spacing.xxs + 1,
 	},
 	})

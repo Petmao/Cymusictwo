@@ -1,3 +1,5 @@
+import type { TextStyle } from 'react-native'
+
 export type ThemeMode = 'system' | 'light' | 'dark'
 export type ResolvedTheme = 'light' | 'dark'
 export type BlurTint = 'light' | 'dark'
@@ -144,9 +146,18 @@ export const typography = {
 	body: { fontSize: 15, fontWeight: '400' as const, letterSpacing: -0.1 },
 	caption: { fontSize: 13, fontWeight: '400' as const, letterSpacing: 0 },
 	micro: { fontSize: 11, fontWeight: '500' as const, letterSpacing: 0.1 },
+	/** 分组标题：小、加粗、微开字距 */
+	label: { fontSize: 12, fontWeight: '700' as const, letterSpacing: 0.6 },
+	/** 时间码：等宽数字，避免跳动 */
+	mono: {
+		fontSize: 12,
+		fontWeight: '500' as const,
+		letterSpacing: 0.4,
+		fontVariant: ['tabular-nums'] as TextStyle['fontVariant'],
+	},
 } as const
 
-/** 层级阴影：卡片一档，浮层一档 */
+/** 层级阴影：卡片一档，封面一档，浮层一档 */
 export const elevation = {
 	card: {
 		shadowColor: '#000000',
@@ -154,6 +165,13 @@ export const elevation = {
 		shadowRadius: 16,
 		shadowOffset: { width: 0, height: 8 },
 		elevation: 6,
+	},
+	artwork: {
+		shadowColor: '#000000',
+		shadowOpacity: 0.36,
+		shadowRadius: 26,
+		shadowOffset: { width: 0, height: 14 },
+		elevation: 18,
 	},
 	pill: {
 		shadowColor: '#000000',
@@ -163,3 +181,6 @@ export const elevation = {
 		elevation: 10,
 	},
 } as const
+
+/** 统一描边粗细，避免各处 hairline 不一致 */
+export const strokeWidth = 0.5

@@ -53,7 +53,7 @@ export const TracksList = React.memo(
 		const { playing } = useIsPlaying()
 
 		const ItemDivider = useCallback(
-			() => <View style={{ ...utilsStyles.itemSeparator, marginVertical: 9, marginLeft: 60 }} />,
+			() => <View style={{ ...utilsStyles.itemSeparator, marginVertical: 6, marginLeft: 64 }} />,
 			[utilsStyles],
 		)
 		const emptyListComponent = useMemo(
@@ -178,7 +178,7 @@ export const TracksList = React.memo(
 				data={tracks}
 				extraData={listExtraData}
 				scrollEnabled={scrollEnabled}
-				contentContainerStyle={{ paddingTop: 10, paddingBottom: 128 }}
+				contentContainerStyle={{ paddingTop: 8, paddingBottom: 132 }}
 				ListHeaderComponent={combinedListHeader}
 				ListFooterComponent={ItemDivider}
 				ItemSeparatorComponent={ItemDivider}

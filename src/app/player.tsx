@@ -6,7 +6,15 @@ import { PlayerRepeatToggle } from '@/components/PlayerRepeatToggle'
 import { PlayerVolumeBar } from '@/components/PlayerVolumeBar'
 import { ShowPlayerListToggle } from '@/components/ShowPlayerListToggle'
 import { unknownTrackImageUri } from '@/constants/images'
-import { ThemeColors, screenPadding, typography } from '@/constants/tokens'
+import {
+	ThemeColors,
+	elevation,
+	radius,
+	screenPadding,
+	spacing,
+	strokeWidth,
+	typography,
+} from '@/constants/tokens'
 import LyricManager from '@/helpers/lyricManager'
 import myTrackPlayer from '@/helpers/trackPlayerIndex'
 import { getSingerMidBySingerName } from '@/helpers/userApi/getMusicSource'
@@ -648,10 +656,12 @@ const createStyles = (
 ) =>
 	StyleSheet.create({
 	menuButton: {
-		width: 32, // 增加按钮宽度
-		height: 32, // 增加按钮高度
-		borderRadius: 16, // 保持圆形（宽度/高度的一半）
-		backgroundColor: colors.overlaySoft, // 半透明的灰色
+		width: 34,
+		height: 34,
+		borderRadius: 17,
+		borderWidth: strokeWidth,
+		borderColor: colors.border,
+		backgroundColor: colors.overlaySoft,
 		justifyContent: 'center',
 		alignItems: 'center',
 	},
@@ -665,17 +675,11 @@ const createStyles = (
 		width: '100%',
 		maxHeight: '50%', // 限制最大高度
 		alignSelf: 'center',
-		borderRadius: 12,
+		borderRadius: radius.lg,
+		borderCurve: 'continuous',
 		overflow: 'hidden',
 		backgroundColor: colors.artworkPlaceholder,
-		shadowColor: colors.shadow,
-		shadowOffset: {
-			width: 0,
-			height: 8,
-		},
-		shadowOpacity: 0.44,
-		shadowRadius: 11.0,
-		elevation: 16,
+		...elevation.artwork,
 	},
 	artworkTouchable: {
 		width: '100%',
@@ -685,7 +689,7 @@ const createStyles = (
 		width: '100%',
 		height: '100%',
 		resizeMode: 'cover',
-		borderRadius: 12,
+		borderRadius: radius.lg,
 		backgroundColor: 'transparent',
 	},
 	trackTitleContainer: {
@@ -711,7 +715,7 @@ const createStyles = (
 		flexDirection: 'row',
 		alignItems: 'center',
 		justifyContent: 'space-between',
-		paddingHorizontal: 16,
+		paddingHorizontal: screenPadding.horizontal,
 	},
 	leftItem: {
 		flex: 1,
@@ -731,13 +735,13 @@ const createStyles = (
 	lyricDelayToggleButton: {
 		paddingVertical: 8,
 		paddingHorizontal: 12,
-		borderRadius: 8,
+		borderRadius: radius.sm,
 	},
 	delayAdjustButton: {
 		backgroundColor: colors.overlaySoft,
 		paddingVertical: 8,
 		paddingHorizontal: 12,
-		borderRadius: 8,
+		borderRadius: radius.sm,
 	},
 	delayAdjustText: {
 		...defaultStyles.text,
@@ -748,9 +752,9 @@ const createStyles = (
 		alignItems: 'center',
 		justifyContent: 'center',
 		backgroundColor: colors.overlaySoft,
-		paddingVertical: 8,
-		paddingHorizontal: 12,
-		borderRadius: 8,
+		paddingVertical: spacing.sm,
+		paddingHorizontal: spacing.md,
+		borderRadius: radius.sm,
 		minWidth: 130,
 	},
 	delayLabel: {

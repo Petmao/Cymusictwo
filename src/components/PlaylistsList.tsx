@@ -36,7 +36,9 @@ export const PlaylistsList = ({
 		)
 	}, [playlists, search])
 	const itemDivider = useMemo(
-		() => () => <View style={{ ...utilsStyles.itemSeparator, marginLeft: 80, marginVertical: 12 }} />,
+		() => () => (
+			<View style={{ ...utilsStyles.itemSeparator, marginLeft: 78, marginVertical: 10 }} />
+		),
 		[utilsStyles],
 	)
 	const emptyListComponent = useMemo(

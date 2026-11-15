@@ -1,5 +1,5 @@
 // src/app/modals/settingModal.tsx
-import { ThemeColors } from '@/constants/tokens'
+import { ThemeColors, radius, spacing, strokeWidth, typography } from '@/constants/tokens'
 import { logError, logInfo } from '@/helpers/logger'
 import myTrackPlayer, {
 	autoCacheLocalStore,
@@ -846,29 +846,30 @@ const createStyles = (colors: ThemeColors) =>
 	},
 	header: {
 		fontSize: 34,
-		fontWeight: 'bold',
-		padding: 20,
-		paddingTop: 50,
+		fontWeight: '700',
+		letterSpacing: 0.37,
+		paddingHorizontal: spacing.xl - 4,
+		paddingTop: 52,
+		paddingBottom: spacing.sm,
 		color: colors.text,
 	},
 	scrollView: {
 		flex: 1,
 	},
 	section: {
-		marginBottom: 20,
+		marginBottom: spacing.xl,
 	},
 	sectionTitle: {
-		fontSize: 18,
-		fontWeight: '600',
-		color: colors.text,
-		marginLeft: 20,
-		marginBottom: 5,
+		...typography.label,
+		color: colors.textMuted,
+		marginLeft: spacing.xl,
+		marginBottom: spacing.sm,
 	},
 	item: {
 		flexDirection: 'row',
 		alignItems: 'center',
-		padding: 16,
-		// 移除 borderBottomWidth 和 borderBottomColor
+		paddingVertical: spacing.md + 2,
+		paddingHorizontal: spacing.lg,
 	},
 	firstItem: {
 		borderBottomWidth: 0,
@@ -877,22 +878,26 @@ const createStyles = (colors: ThemeColors) =>
 		borderBottomWidth: 0, // 确保最后一项没有底部边框
 	},
 	separator: {
-		left: 16,
-		right: 16,
-		height: 1,
-		backgroundColor: colors.maximumTrackTintColor,
+		left: spacing.lg,
+		right: 0,
+		height: strokeWidth,
+		backgroundColor: colors.separator,
 	},
 	sectionContent: {
 		backgroundColor: colors.surfaceElevated,
-		borderRadius: 10,
-		marginHorizontal: 16,
+		borderRadius: radius.md + 2,
+		borderCurve: 'continuous',
+		borderWidth: strokeWidth,
+		borderColor: colors.border,
+		marginHorizontal: spacing.lg,
 		overflow: 'hidden', // 确保圆角不被分隔线覆盖
 	},
 	icon: {
-		width: 30,
-		height: 30,
-		marginRight: 10,
-		borderRadius: 6,
+		width: 28,
+		height: 28,
+		marginRight: spacing.md,
+		borderRadius: radius.xs + 2,
+		borderCurve: 'continuous',
 	},
 	itemContent: {
 		flex: 1,
@@ -902,10 +907,11 @@ const createStyles = (colors: ThemeColors) =>
 	},
 	itemText: {
 		fontSize: 16,
+		letterSpacing: -0.1,
 		color: colors.text,
 	},
 	itemValue: {
-		fontSize: 16,
+		fontSize: 15,
 		color: colors.textMuted,
 	},
 	arrowRight: {
@@ -917,7 +923,7 @@ const createStyles = (colors: ThemeColors) =>
 		alignItems: 'center',
 	},
 	menuTriggerText: {
-		fontSize: 16,
+		fontSize: 15,
 		color: colors.textMuted,
 	},
 	loadingOverlay: {

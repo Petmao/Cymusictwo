@@ -1,4 +1,4 @@
-import { ThemeColors } from '@/constants/tokens'
+import { ThemeColors, radius, spacing, strokeWidth, typography } from '@/constants/tokens'
 import { Playlist } from '@/helpers/types'
 import { useThemeColors } from '@/hooks/useAppTheme'
 import { useDefaultStyles } from '@/styles'
@@ -31,17 +31,17 @@ export const RadioListItem = ({ playlist, ...props }: PlaylistListItemProps) => 
 
 				<View
 					style={{
+						flex: 1,
 						flexDirection: 'row',
 						justifyContent: 'space-between',
 						alignItems: 'center',
-						width: '100%',
 					}}
 				>
 					<Text numberOfLines={1} style={styles.playlistNameText}>
 						{playlist.title}
 					</Text>
 
-					<AntDesign name="right" size={16} color={colors.icon} style={{ opacity: 0.5 }} />
+					<AntDesign name="right" size={16} color={colors.textMuted} />
 				</View>
 			</View>
 		</TouchableHighlight>
@@ -55,19 +55,21 @@ const createStyles = (
 	StyleSheet.create({
 	playlistItemContainer: {
 		flexDirection: 'row',
-		columnGap: 14,
+		columnGap: spacing.md + 2,
 		alignItems: 'center',
-		paddingRight: 90,
+		paddingVertical: spacing.xs + 2,
 	},
 	playlistArtworkImage: {
-		borderRadius: 8,
-		width: 70,
-		height: 70,
+		borderRadius: radius.md,
+		borderCurve: 'continuous',
+		borderWidth: strokeWidth,
+		borderColor: colors.border,
+		width: 64,
+		height: 64,
 	},
 	playlistNameText: {
 		...defaultStyles.text,
-		fontSize: 17,
-		fontWeight: '600',
-		maxWidth: '80%',
+		...typography.headline,
+		flex: 1,
 	},
 	})

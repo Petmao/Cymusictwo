@@ -1,4 +1,4 @@
-import { ThemeColors, fontSize } from '@/constants/tokens'
+import { ThemeColors, typography } from '@/constants/tokens'
 import { formatSecondsToMinutes } from '@/helpers/miscellaneous'
 import { useThemeColors } from '@/hooks/useAppTheme'
 import { useDefaultStyles, useUtilsStyles } from '@/styles'
@@ -108,14 +108,11 @@ const createStyles = (
 		flexDirection: 'row',
 		justifyContent: 'space-between',
 		alignItems: 'baseline',
-		marginTop: 20,
+		marginTop: 16,
 	},
 	timeText: {
 		...defaultStyles.text,
-		color: colors.text,
-		opacity: 0.75,
-		fontSize: fontSize.xs,
-		letterSpacing: 0.7,
-		fontWeight: '500',
+		...typography.mono,
+		color: colors.textMuted,
 	},
 	})

@@ -1,7 +1,7 @@
 import { TrackShortcutsMenu } from '@/components/TrackShortcutsMenu'
 import { StopPropagation } from '@/components/utils/StopPropagation'
 import { unknownTrackImageUri } from '@/constants/images'
-import { ThemeColors, fontSize } from '@/constants/tokens'
+import { ThemeColors, radius, spacing, strokeWidth, typography } from '@/constants/tokens'
 import { useThemeColors } from '@/hooks/useAppTheme'
 import { useDefaultStyles } from '@/styles'
 import { Entypo, Ionicons } from '@expo/vector-icons'
@@ -108,37 +108,39 @@ const createStyles = (
 	StyleSheet.create({
 	trackItemContainer: {
 		flexDirection: 'row',
-		columnGap: 14,
+		columnGap: spacing.md + 2,
 		alignItems: 'center',
-		paddingRight: 20,
+		paddingRight: spacing.lg,
+		paddingVertical: spacing.xs + 2,
 	},
 	trackPlayingIconIndicator: {
 		position: 'absolute',
-		top: 18,
-		left: 16,
+		top: 20,
+		left: 20,
 		width: 16,
 		height: 16,
 	},
 	trackPausedIndicator: {
 		position: 'absolute',
-		top: 14,
-		left: 14,
+		top: 16,
+		left: 16,
 	},
 	trackArtworkImage: {
-		borderRadius: 8,
-		width: 50,
-		height: 50,
+		borderRadius: radius.sm + 2,
+		borderCurve: 'continuous',
+		borderWidth: strokeWidth,
+		borderColor: colors.border,
+		width: 52,
+		height: 52,
 	},
 	trackTitleText: {
 		...defaultStyles.text,
-		fontSize: fontSize.sm,
-		fontWeight: '600',
+		...typography.headline,
 		maxWidth: '90%',
 	},
 	trackArtistText: {
-		...defaultStyles.text,
+		...typography.caption,
 		color: colors.textMuted,
-		fontSize: 14,
-		marginTop: 4,
+		marginTop: spacing.xs + 1,
 	},
 	})
