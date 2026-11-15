@@ -1,5 +1,5 @@
-import appIcon from '@/assets/1024.png'
-import { ThemeColors, elevation, radius, spacing, strokeWidth, typography } from '@/constants/tokens'
+import { pickRandomQuote } from '@/constants/quotes'
+import { ThemeColors, radius, spacing, strokeWidth, typography } from '@/constants/tokens'
 import { useThemeColors } from '@/hooks/useAppTheme'
 import { musicApiStore } from '@/player/PlayerStore'
 import { useDefaultStyles } from '@/styles'
@@ -8,14 +8,7 @@ import { Ionicons } from '@expo/vector-icons'
 import Constants from 'expo-constants'
 import { router } from 'expo-router'
 import { useMemo } from 'react'
-import {
-	Image,
-	ScrollView,
-	StyleSheet,
-	Text,
-	TouchableHighlight,
-	View,
-} from 'react-native'
+import { ScrollView, StyleSheet, Text, TouchableHighlight, View } from 'react-native'
 
 type RowProps = {
 	icon: keyof typeof Ionicons.glyphMap
@@ -56,6 +49,8 @@ const MineScreen = () => {
 	const styles = useMemo(() => createStyles(colors, defaultStyles), [colors, defaultStyles])
 	const musicApis = musicApiStore.useValue() ?? []
 	const version = Constants.expoConfig?.version ?? '1.2.0'
+	// 每次进页面换一句，进一次烦一次
+	const quote = useMemo(() => pickRandomQuote(), [])
 
 	return (
 		<View style={defaultStyles.container}>
@@ -63,16 +58,9 @@ const MineScreen = () => {
 				contentInsetAdjustmentBehavior="automatic"
 				contentContainerStyle={styles.content}
 			>
-				<View style={styles.profileCard}>
-					<View style={styles.avatarWrap}>
-						<Image source={appIcon} style={styles.avatar} resizeMode="cover" />
-					</View>
-					<View style={styles.profileText}>
-						<Text style={styles.profileName}>CyMusic</Text>
-						<Text style={styles.profileMeta}>
-							{i18n.t('mine.sources', { count: musicApis.length })}
-						</Text>
-					</View>
+				<View style={styles.quoteCard}>
+					<Text style={styles.quoteZh}>{quote.zh}</Text>
+					<Text style={styles.quoteEn}>{quote.en}</Text>
 				</View>
 
 				<Text style={styles.sectionTitle}>{i18n.t('mine.general')}</Text>
@@ -87,8 +75,22 @@ const MineScreen = () => {
 					/>
 				</View>
 
-				<Text style={styles.sectionTitle}>{i18n.t('mine.about')}</Text>
+				<Text style={styles.sectionTitle}>{i18n.t('mine.appInfo')}</Text>
 				<View style={styles.sectionCard}>
+					<Row
+						icon="albums-outline"
+						label={i18n.t('mine.sourcesLabel')}
+						value={i18n.t('mine.sources', { count: musicApis.length })}
+						styles={styles}
+						colors={colors}
+					/>
+					<Row
+						icon="document-text-outline"
+						label={i18n.t('mine.logs')}
+						onPress={() => router.push('/(modals)/logScreen')}
+						styles={styles}
+						colors={colors}
+					/>
 					<Row
 						icon="information-circle-outline"
 						label={i18n.t('mine.version')}
@@ -112,43 +114,28 @@ const createStyles = (
 	StyleSheet.create({
 	content: {
 		paddingHorizontal: spacing.xl,
-		paddingTop: spacing.sm,
+		paddingTop: spacing.md,
 		paddingBottom: 148,
 	},
-	profileCard: {
-		flexDirection: 'row',
-		alignItems: 'center',
+	quoteCard: {
 		backgroundColor: colors.surfaceElevated,
 		borderRadius: radius.xl,
 		borderCurve: 'continuous',
 		borderWidth: strokeWidth,
 		borderColor: colors.border,
-		padding: spacing.lg,
-		...elevation.card,
+		paddingVertical: spacing.xl,
+		paddingHorizontal: spacing.lg,
 	},
-	avatarWrap: {
-		borderRadius: radius.lg,
-		borderCurve: 'continuous',
-		overflow: 'hidden',
-		borderWidth: strokeWidth,
-		borderColor: colors.border,
-	},
-	avatar: {
-		width: 68,
-		height: 68,
-	},
-	profileText: {
-		flex: 1,
-		marginLeft: spacing.lg,
-	},
-	profileName: {
+	quoteZh: {
 		...defaultStyles.text,
 		...typography.title,
+		lineHeight: 32,
 	},
-	profileMeta: {
-		...typography.caption,
+	quoteEn: {
+		...typography.body,
 		color: colors.textMuted,
-		marginTop: spacing.xxs + 1,
+		marginTop: spacing.sm,
+		lineHeight: 22,
 	},
 	sectionTitle: {
 		...typography.label,

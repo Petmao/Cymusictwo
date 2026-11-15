@@ -6,7 +6,10 @@
 		"general": "General",
 		"about": "About",
 		"version": "Version",
-		"sources": "%{count} source(s)"
+		"sources": "%{count}",
+		"sourcesLabel": "Sources",
+		"appInfo": "App info",
+		"logs": "Logs"
 	},
 	"settings": {
 		"title": "Settings",
@@ -29,6 +32,7 @@
 			"sourceStatus": "Source Status",
 			"deleteSource": "Delete Source",
 			"selectDelete": "Select Delete",
+			"addApiSource": "Add API source",
 			"importSource": "Import Source",
 			"currentQuality": "Current Quality",
 			"changeLanguage": "Change Language",

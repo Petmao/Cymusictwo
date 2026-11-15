@@ -27,17 +27,14 @@ export type SearchListProps = {
 
 const ItemDivider = memo(() => {
 	const utilsStyles = useUtilsStyles()
-	return <View style={{ ...utilsStyles.itemSeparator, marginVertical: 9, marginLeft: 60 }} />
+	return <View style={{ ...utilsStyles.itemSeparator, marginVertical: 6, marginLeft: 64 }} />
 })
 
 const EmptyComponent = memo(() => {
 	const utilsStyles = useUtilsStyles()
 	return (
 		<View>
-			<FastImage
-				source={{ uri: unknownTrackImageUri, priority: FastImage.priority.normal }}
-				style={utilsStyles.emptyContentImage}
-			/>
+			<Text style={utilsStyles.emptyContentText}>{i18n.t('find.noResults')}</Text>
 		</View>
 	)
 })

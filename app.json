@@ -8,9 +8,7 @@
 		"userInterfaceStyle": "automatic",
 		"scheme": "cymusic",
 		"splash": {
-			"image": "./assets/splash.png",
-			"resizeMode": "cover",
-			"backgroundColor": "#000"
+			"backgroundColor": "#000000"
 		},
 		"assetBundlePatterns": ["**/*"],
 		"ios": {
@@ -27,9 +25,7 @@
 				"CADisableMinimumFrameDurationOnPhone": true
 			},
 			"splash": {
-				"image": "./assets/splash.png",
-				"resizeMode": "cover",
-				"backgroundColor": "#000"
+				"backgroundColor": "#000000"
 			}
 		},
 		"android": {

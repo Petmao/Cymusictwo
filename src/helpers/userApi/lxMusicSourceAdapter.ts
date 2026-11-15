@@ -10,6 +10,7 @@ import type {
 	ResponseParams,
 } from '@/components/utils/nativeModules/userApi'
 import {
+	isUserApiRuntimeAvailable,
 	loadScript,
 	onScriptAction,
 	sendAction
@@ -373,6 +374,12 @@ const initLxMusicScript = (
 			removeListener = null
 		}
 		scriptInited = false
+
+		if (!isUserApiRuntimeAvailable) {
+			reject(new Error('当前版本没有内置 LX 脚本运行时，请改用「添加 API 音源」'))
+			scriptInitPromise = null
+			return
+		}
 
 		// 设置事件监听
 		removeListener = onScriptAction(handleScriptAction)

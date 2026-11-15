@@ -1,6 +1,23 @@
 import { NativeEventEmitter, NativeModules } from 'react-native'
 
-const { UserApiModule } = NativeModules
+const NativeUserApi = (NativeModules as any).UserApiModule as
+  | {
+      loadScript: (info: any) => void
+      sendAction: (action: string, data: string) => void
+      destroy: () => void
+    }
+  | undefined
+
+/** 这套 LX 脚本运行时依赖原生模块，1.2.0 基线里并没有随包提供，缺失时要能优雅降级 */
+export const isUserApiRuntimeAvailable = Boolean(NativeUserApi)
+
+const noop = () => undefined
+
+const UserApiModule = NativeUserApi ?? {
+  loadScript: noop,
+  sendAction: noop,
+  destroy: noop,
+}
 
 let loadScriptInfo: LX.UserApi.UserApiInfo | null = null
 export const loadScript = (info: LX.UserApi.UserApiInfo & { script: string }) => {
@@ -82,8 +99,11 @@ export interface Actions {
 export type ActionsEvent = { [K in keyof Actions]: { action: K, data: Actions[K] } }[keyof Actions]
 
 export const onScriptAction = (handler: (event: ActionsEvent) => void): () => void => {
+  if (!NativeUserApi) {
+    return () => {}
+  }
   // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-  const eventEmitter = new NativeEventEmitter(UserApiModule)
+  const eventEmitter = new NativeEventEmitter(NativeUserApi as any)
   const eventListener = eventEmitter.addListener('api-action', event => {
     if (event.data) event.data = JSON.parse(event.data as string)
     if (event.action == 'init') {

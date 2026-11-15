@@ -6,7 +6,10 @@
 		"general": "通用",
 		"about": "关于",
 		"version": "版本",
-		"sources": "音源 %{count} 个"
+		"sources": "%{count} 个",
+		"sourcesLabel": "已装音源",
+		"appInfo": "应用信息",
+		"logs": "运行日志"
 	},
 	"settings": {
 		"title": "设置",
@@ -29,6 +32,7 @@
 			"sourceStatus": "音源状态",
 			"deleteSource": "删除音源",
 			"selectDelete": "选择删除",
+			"addApiSource": "添加 API 音源",
 			"importSource": "导入音源",
 			"currentQuality": "当前音质",
 			"changeLanguage": "切换语言",

@@ -12,6 +12,7 @@ import myTrackPlayer, {
 } from '@/helpers/trackPlayerIndex'
 import { useThemeColors, useThemeMode } from '@/hooks/useAppTheme'
 import { createMusicApiFromScript, fetchScriptFromUrl } from '@/helpers/userApi/importMusicSource'
+import { createHttpApiSource } from '@/helpers/userApi/httpApiSource'
 import PersistStatus from '@/store/PersistStatus'
 import i18n, { changeLanguage, nowLanguage } from '@/utils/i18n'
 import { GlobalState } from '@/utils/stateMapper'
@@ -384,6 +385,36 @@ const importMusicSourceFromFile = async () => {
 		Alert.alert('导入音源失败', errMsg)
 	}
 }
+const importApiSourceFromUrl = async () => {
+	Alert.prompt(
+		'添加 API 音源',
+		'输入接口基地址，例如 https://api.example.com',
+		[
+			{ text: '取消', style: 'cancel' },
+			{
+				text: '确定',
+				onPress: async (rawUrl) => {
+					const url = rawUrl?.trim?.() ?? ''
+					if (!/^https?:\/\//i.test(url)) {
+						Alert.alert('地址无效', '需要以 http:// 或 https:// 开头')
+						return
+					}
+					try {
+						const musicApi = createHttpApiSource(url)
+						myTrackPlayer.addMusicApi(musicApi)
+						showToast('API 音源已添加')
+					} catch (error) {
+						const message = error instanceof Error ? error.message : String(error)
+						logError('添加 API 音源失败:', message)
+						Alert.alert('添加失败', message)
+					}
+				},
+			},
+		],
+		'plain-text',
+	)
+}
+
 const SettingModal = () => {
 	const colors = useThemeColors()
 	const { themeMode, setThemeMode } = useThemeMode()
@@ -410,12 +441,7 @@ const SettingModal = () => {
 		{
 			title: i18n.t('settings.sections.appInfo'),
 			data: [
-				{ id: '1', title: 'CyMusic', type: 'link', icon: require('@/assets/144.png') },
-				{ id: '2', title: i18n.t('settings.items.version'), type: 'value', value: CURRENT_VERSION },
-				{ id: '3', title: i18n.t('settings.items.checkUpdate'), type: 'value' },
-				{ id: '5', title: i18n.t('settings.items.projectLink'), type: 'value', value: '' },
 				{ id: '9', title: i18n.t('settings.items.clearCache'), type: 'value', value: '' },
-				{ id: '13', title: i18n.t('settings.items.viewLogs'), type: 'link' },
 				{
 					id: '15',
 					title: i18n.t('settings.items.changeLanguage'),
@@ -458,6 +484,7 @@ const SettingModal = () => {
 				},
 				{ id: '12', title: i18n.t('settings.items.deleteSource'), type: 'value', value: '' },
 				{ id: '8', title: i18n.t('settings.items.importSource'), type: 'value' },
+				{ id: '19', title: i18n.t('settings.items.addApiSource'), type: 'value', value: '' },
 			],
 		},
 		{
@@ -707,10 +734,8 @@ const SettingModal = () => {
 					if (item.title === i18n.t('settings.items.viewLogs')) {
 						router.push('/(modals)/logScreen')
 					}
-					if (item.title === i18n.t('settings.items.projectLink')) {
-						Linking.openURL('https://github.com/gyc-12/Cymusic').catch((err) =>
-							logError("Couldn't load page", err),
-						)
+					if (item.id === '19') {
+						importApiSourceFromUrl()
 					} else if (item.type === 'link') {
 						if (item.title === i18n.t('settings.items.clearPlaylist')) {
 							Alert.alert(
@@ -726,10 +751,7 @@ const SettingModal = () => {
 							)
 						} else if (item.title === i18n.t('settings.items.importSource')) {
 							// importMusicSourceFromFile()
-						} else if (item.title === 'CyMusic') {
-							showToast('CyMusic', 'success')
 						}
-						// logInfo(`Navigate to ${item.title}`)
 					} else if (item.title === i18n.t('settings.items.checkUpdate')) {
 						checkForUpdates()
 					} else if (item.title === i18n.t('settings.items.clearCache')) {
