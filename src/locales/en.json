@@ -1,4 +1,13 @@
 {
+	"common": {
+		"songsCount": "%{count} tracks"
+	},
+	"mine": {
+		"general": "General",
+		"about": "About",
+		"version": "Version",
+		"sources": "%{count} source(s)"
+	},
 	"settings": {
 		"title": "Settings",
 		"sections": {
@@ -98,8 +107,9 @@
 	"appTab": {
 		"songs": "Songs",
 		"search": "Search",
-		"radio": "Radio",
+		"radio": "Charts",
 		"favorites": "Favorites",
+		"mine": "Mine",
 		"favoritesSongs": "Favorite Songs",
 		"localOrCachedSongs": "Local/Cached Songs"
 	},
@@ -109,7 +119,7 @@
 		"import": "Import"
 	},
 	"find": {
-		"inRadio": "Find in Radio",
+		"inRadio": "Search charts",
 		"inSearch": "Find Songs or Artists Online",
 		"inSongs": "Find in Songs",
 		"inFavorites": "Find in Favorites",

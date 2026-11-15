@@ -2,12 +2,16 @@ import { FloatingPlayer } from '@/components/FloatingPlayer'
 import { BlurTint, elevation, fontSize, radius, spacing } from '@/constants/tokens'
 import { useAppTheme } from '@/hooks/useAppTheme'
 import i18n from '@/utils/i18n'
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { Ionicons } from '@expo/vector-icons'
 import { BlurView } from 'expo-blur'
 import { Tabs } from 'expo-router'
 import React, { useMemo } from 'react'
 import { StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+
+export const unstable_settings = {
+	initialRouteName: 'search',
+}
 
 const TAB_BAR_HEIGHT = 54
 const TAB_BAR_MARGIN = 12
@@ -82,15 +86,11 @@ const TabsNavigation = () => {
 				}}
 			>
 				<Tabs.Screen
-					name="(songs)"
+					name="search"
 					options={{
-						title: i18n.t('appTab.songs'),
+						title: i18n.t('appTab.search'),
 						tabBarIcon: ({ color, focused }) => (
-							<Ionicons
-								name={focused ? 'musical-notes' : 'musical-notes-outline'}
-								size={23}
-								color={color}
-							/>
+							<Ionicons name={focused ? 'search' : 'search-outline'} size={23} color={color} />
 						),
 					}}
 				/>
@@ -99,7 +99,7 @@ const TabsNavigation = () => {
 					options={{
 						title: i18n.t('appTab.radio'),
 						tabBarIcon: ({ color, focused }) => (
-							<Ionicons name={focused ? 'radio' : 'radio-outline'} size={23} color={color} />
+							<Ionicons name={focused ? 'trophy' : 'trophy-outline'} size={23} color={color} />
 						),
 					}}
 				/>
@@ -113,13 +113,13 @@ const TabsNavigation = () => {
 					}}
 				/>
 				<Tabs.Screen
-					name="search"
+					name="mine"
 					options={{
-						title: i18n.t('appTab.search'),
+						title: i18n.t('appTab.mine'),
 						tabBarIcon: ({ color, focused }) => (
-							<MaterialCommunityIcons
-								name={focused ? 'text-search' : 'text-search'}
-								size={25}
+							<Ionicons
+								name={focused ? 'person-circle' : 'person-circle-outline'}
+								size={24}
 								color={color}
 							/>
 						),

@@ -1,7 +1,9 @@
-import { fontSize } from '@/constants/tokens'
+import { ThemeColors, elevation, radius, spacing, strokeWidth, typography } from '@/constants/tokens'
 import { generateTracksListId } from '@/helpers/miscellaneous'
 import { Playlist } from '@/helpers/types'
+import { useThemeColors } from '@/hooks/useAppTheme'
 import { useDefaultStyles } from '@/styles'
+import i18n from '@/utils/i18n'
 import { useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import FastImage from 'react-native-fast-image'
@@ -40,11 +42,9 @@ export const PlaylistTracksList = ({
 	deleteSelectedTracks,
 	exportSelectedTracks,
 }: PlaylistTracksListProps) => {
+	const colors = useThemeColors()
 	const defaultStyles = useDefaultStyles()
-	const styles = useMemo(() => createStyles(defaultStyles), [defaultStyles])
-	// const filteredPlaylistTracks = useMemo(() => {
-	// 	return playlist.tracks.filter(trackTitleFilter(search))
-	// }, [playlist.tracks, search])
+	const styles = useMemo(() => createStyles(colors, defaultStyles), [colors, defaultStyles])
 
 	return (
 		<TracksList
@@ -54,22 +54,29 @@ export const PlaylistTracksList = ({
 			ListHeaderComponentStyle={styles.playlistHeaderContainer}
 			ListHeaderComponent={
 				<View>
-					<View style={styles.artworkImageContainer}>
-						<FastImage
-							source={{
-								uri: playlist.coverImg || playlist.artwork,
-								priority: FastImage.priority.high,
-							}}
-							style={styles.artworkImage}
-						/>
+					<View style={styles.heroCard}>
+						<View style={styles.heroArtworkWrap}>
+							<FastImage
+								source={{
+									uri: playlist.coverImg || playlist.artwork,
+									priority: FastImage.priority.high,
+								}}
+								style={styles.heroArtwork}
+							/>
+						</View>
+
+						<View style={styles.heroText}>
+							<Text numberOfLines={1} style={styles.heroTitle}>
+								{playlist.title}
+							</Text>
+							<Text numberOfLines={1} style={styles.heroMeta}>
+								{i18n.t('common.songsCount', { count: tracks.length })}
+							</Text>
+						</View>
 					</View>
 
-					<Text numberOfLines={1} style={styles.playlistNameText}>
-						{playlist.title}
-					</Text>
-
 					<QueueControls
-						style={{ paddingTop: 24 }}
+						style={{ paddingTop: spacing.lg }}
 						tracks={tracks}
 						showImportMenu={showImportMenu}
 						onImportTrack={onImportTrack}
@@ -92,28 +99,49 @@ export const PlaylistTracksList = ({
 	)
 }
 
-const createStyles = (defaultStyles: ReturnType<typeof useDefaultStyles>) =>
+const createStyles = (
+	colors: ThemeColors,
+	defaultStyles: ReturnType<typeof useDefaultStyles>,
+) =>
 	StyleSheet.create({
 	playlistHeaderContainer: {
 		flex: 1,
-		marginBottom: 32,
+		marginBottom: spacing.xl,
 	},
-	artworkImageContainer: {
+	heroCard: {
 		flexDirection: 'row',
-		justifyContent: 'center',
-		height: 300,
+		alignItems: 'center',
+		backgroundColor: colors.surfaceElevated,
+		borderRadius: radius.lg,
+		borderCurve: 'continuous',
+		borderWidth: strokeWidth,
+		borderColor: colors.border,
+		padding: spacing.sm + 2,
+		marginTop: spacing.sm,
+		...elevation.card,
 	},
-	artworkImage: {
-		width: '85%',
-		height: '100%',
-		resizeMode: 'cover',
-		borderRadius: 12,
+	heroArtworkWrap: {
+		borderRadius: radius.md,
+		borderCurve: 'continuous',
+		overflow: 'hidden',
+		borderWidth: strokeWidth,
+		borderColor: colors.border,
 	},
-	playlistNameText: {
+	heroArtwork: {
+		width: 56,
+		height: 56,
+	},
+	heroText: {
+		flex: 1,
+		marginLeft: spacing.md,
+	},
+	heroTitle: {
 		...defaultStyles.text,
-		marginTop: 22,
-		textAlign: 'center',
-		fontSize: fontSize.lg,
-		fontWeight: '800',
+		...typography.headline,
+	},
+	heroMeta: {
+		...typography.caption,
+		color: colors.textMuted,
+		marginTop: spacing.xxs + 1,
 	},
 	})

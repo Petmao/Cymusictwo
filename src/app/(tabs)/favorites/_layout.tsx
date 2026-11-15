@@ -16,7 +16,8 @@ const FavoritesScreenLayout = () => {
 					name="index"
 					options={{
 						...getStackScreenWithSearchBar(colors),
-						headerTitle: i18n.t('appTab.favorites'),
+						headerLargeTitle: false,
+						headerTitle: '',
 						headerRight: () => <AddPlayListButton />,
 					}}
 				/>

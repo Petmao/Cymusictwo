@@ -15,7 +15,8 @@ const RadiolistsScreenLayout = () => {
 					name="index"
 					options={{
 						...getStackScreenWithSearchBar(colors),
-						headerTitle: i18n.t('appTab.radio'),
+						headerLargeTitle: false,
+						headerTitle: '',
 					}}
 				/>
 				<Stack.Screen

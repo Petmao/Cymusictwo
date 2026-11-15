@@ -304,7 +304,7 @@ const MusicSourceMenu = ({ isDelete, onSelectSource }) => {
 const importMusicSourceFromUrl = async () => {
 	Alert.prompt(
 		'导入音源',
-		'请输入音源 URL',
+		'请输入音源 URL（http/https 均可）',
 		[
 			{
 				text: '取消',
@@ -313,22 +313,27 @@ const importMusicSourceFromUrl = async () => {
 			},
 			{
 				text: '确定',
-				onPress: async (url) => {
+				onPress: async (rawUrl) => {
+					const url = rawUrl?.trim?.() ?? ''
 					if (!url) {
 						Alert.alert('错误', 'URL 不能为空')
+						return
+					}
+					if (!/^https?:\/\//i.test(url)) {
+						Alert.alert('错误', 'URL 需要以 http:// 或 https:// 开头')
 						return
 					}
 
 					try {
 						const sourceCode = await fetchScriptFromUrl(url)
-						logInfo('获取到的源代码:', sourceCode)
+						logInfo('获取到的源代码长度:', String(sourceCode?.length))
 						const musicApi = await createMusicApiFromScript(sourceCode)
 						myTrackPlayer.addMusicApi(musicApi)
-						return
+						showToast('音源导入成功')
 					} catch (error) {
 						const errMsg = error instanceof Error ? error.message : String(error)
 						logError('导入音源失败:', errMsg)
-						Alert.alert('错误', `导入音源失败: ${errMsg}`)
+						Alert.alert('导入音源失败', errMsg)
 					}
 				},
 			},
@@ -339,8 +344,10 @@ const importMusicSourceFromUrl = async () => {
 const importMusicSourceFromFile = async () => {
 	try {
 		const result = await DocumentPicker.getDocumentAsync({
-			type: 'text/javascript',
-			copyToCacheDirectory: false,
+			// .js 在 iOS 上的 UTI 不止 text/javascript，放宽后再校验内容
+			type: ['text/javascript', 'public.plain-text', 'public.data', '*/*'],
+			copyToCacheDirectory: true,
+			multiple: false,
 		})
 
 		if (result.canceled === true) {
@@ -348,18 +355,33 @@ const importMusicSourceFromFile = async () => {
 			return
 		}
 
-		// logInfo('File selected:', result.assets[0].uri)
-		const fileUri = decodeURIComponent(result.assets[0].uri)
-		const fileContents = await RNFS.readFile(fileUri, 'utf8')
-		logInfo('File contents:', fileContents)
+		const asset = result.assets?.[0]
+		if (!asset?.uri) {
+			throw new Error('没有读取到文件')
+		}
+
+		const fileUri = asset.uri
+		let fileContents = ''
+		try {
+			fileContents = await RNFS.readFile(decodeURIComponent(fileUri), 'utf8')
+		} catch (readError) {
+			// copyToCacheDirectory 已经拷到沙盒，这里再兜一层 fetch
+			const response = await fetch(fileUri)
+			fileContents = await response.text()
+		}
+
+		if (!fileContents || !fileContents.trim()) {
+			throw new Error('文件内容为空')
+		}
+
+		logInfo('音源脚本长度:', String(fileContents.length))
 		const musicApi = await createMusicApiFromScript(fileContents)
 		myTrackPlayer.addMusicApi(musicApi)
-		return
+		showToast('音源导入成功')
 	} catch (err) {
 		const errMsg = err instanceof Error ? (err as Error).message : String(err)
-		logError('Error importing music source:', errMsg)
-		Alert.alert('导入失败', `无法导入音源: ${errMsg}`)
 		logError('导入音源失败: ' + errMsg)
+		Alert.alert('导入音源失败', errMsg)
 	}
 }
 const SettingModal = () => {

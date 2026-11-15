@@ -1,4 +1,13 @@
 {
+	"common": {
+		"songsCount": "共 %{count} 首"
+	},
+	"mine": {
+		"general": "通用",
+		"about": "关于",
+		"version": "版本",
+		"sources": "音源 %{count} 个"
+	},
 	"settings": {
 		"title": "设置",
 		"sections": {
@@ -99,8 +108,9 @@
 	"appTab": {
 		"songs": "音乐",
 		"search": "搜索",
-		"radio": "广播",
+		"radio": "榜单",
 		"favorites": "收藏",
+		"mine": "我的",
 		"favoritesSongs": "喜欢的歌曲",
 		"localOrCachedSongs": "本地/缓存的歌曲"
 	},
@@ -110,7 +120,7 @@
 		"import": "导入"
 	},
 	"find": {
-		"inRadio": "在广播中搜索",
+		"inRadio": "在榜单中搜索",
 		"inSearch": "在线搜索歌曲或歌手",
 		"inSongs": "在歌曲中搜索",
 		"inFavorites": "在收藏中搜索",
