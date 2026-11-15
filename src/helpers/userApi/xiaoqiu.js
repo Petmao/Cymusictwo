@@ -12,7 +12,7 @@ function formatMusicItem(_) {
 		id: _.mid || _.songid,
 		songmid: _.id || _.songmid,
 		title: _.title || _.songname,
-		artist: _.singer.map((s) => s.name).join(', '),
+		artist: (_.singer || []).map((s) => s.name).join(', '),
 		artwork: albummid
 			? `https://y.gtimg.cn/music/photo_new/T002R800x800M000${albummid}.jpg`
 			: undefined,
@@ -83,13 +83,28 @@ async function searchBase(query, page, type, pageSize) {
 			withCredentials: true,
 		})
 	).data
+	const payload = res && res.req_1 && res.req_1.data
+	const body = payload && payload.body
+	const listKey = searchTypeMap[type]
+	const list = body && body[listKey] && body[listKey].list
+	if (!Array.isArray(list)) {
+		const code = (res && res.req_1 && res.req_1.code) ?? (res && res.code)
+		throw new Error(`QQ 搜索返回异常（code=${code}），已重试仍失败`)
+	}
+	const sum = payload && payload.meta && typeof payload.meta.sum === 'number' ? payload.meta.sum : list.length
 	return {
-		isEnd: res.req_1.data.meta.sum <= page * pageSize,
-		data: res.req_1.data.body[searchTypeMap[type]].list,
+		isEnd: sum <= page * pageSize,
+		data: list,
 	}
 }
 export async function searchMusic(query, page, pageSize) {
-	const songs = await searchBase(query, page, 0, pageSize)
+	const keyword = String(query || '').trim()
+	let songs = await searchBase(keyword, page, 0, pageSize)
+	if (songs.data.length === 0) {
+		// 同一个词用 type=0 偶尔返回空列表，type=7 通常还能拿到
+		const retry = await searchBase(keyword, page, 7, pageSize)
+		if (retry.data.length > 0) songs = retry
+	}
 	return {
 		isEnd: songs.isEnd,
 		data: songs.data.map(formatMusicItem),

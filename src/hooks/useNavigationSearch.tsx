@@ -2,9 +2,17 @@ import { useThemeColors } from '@/hooks/useAppTheme'
 import { nowLanguage } from '@/utils/i18n'
 import { useNavigation } from 'expo-router'
 import { debounce } from 'lodash'
-import { useCallback, useLayoutEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { SearchBarProps } from 'react-native-screens'
 
+/**
+ * 原生导航栏搜索框。
+ *
+ * 坑点：searchBarOptions 传对象字面量时每次渲染都是新引用，如果把它放进 useLayoutEffect
+ * 的依赖里，就会变成「每次渲染都重新 setOptions」——原生搜索框被反复重配，
+ * 典型表现是输入没反应、搜索框内容被重置、从播放页回来再也搜不出东西。
+ * 所以这里用「序列化后的 key」作为依赖，回调走 ref，注册只做一次。
+ */
 export const useNavigationSearch = ({
 	searchBarOptions,
 	onFocus,
@@ -30,35 +38,80 @@ export const useNavigationSearch = ({
 			hintTextColor: colors.placeholder,
 			hideWhenScrolling: false,
 		}),
-		[colors],
+		[colors.primary, colors.background, colors.surfaceMuted, colors.text, colors.placeholder],
 	)
 
-	const debouncedSetSearch = useCallback(
-		debounce((text) => {
-			setSearch(text)
-		}, 400),
+	// 回调放 ref，避免调用方每次渲染换函数导致重复注册
+	const handlersRef = useRef({ onFocus, onBlur, onCancel })
+	useEffect(() => {
+		handlersRef.current = { onFocus, onBlur, onCancel }
+	}, [onFocus, onBlur, onCancel])
+
+	const debouncedSetSearch = useMemo(
+		() =>
+			debounce((text: string) => {
+				setSearch(text ?? '')
+			}, 400),
 		[],
 	)
 
-	const handleOnChangeText: SearchBarProps['onChangeText'] = ({ nativeEvent: { text } }) => {
-		debouncedSetSearch(text)
-	}
+	useEffect(() => () => debouncedSetSearch.cancel(), [debouncedSetSearch])
+
+	const handleOnChangeText: SearchBarProps['onChangeText'] = useCallback(
+		({ nativeEvent: { text } }: { nativeEvent: { text: string } }) => {
+			debouncedSetSearch(text)
+		},
+		[debouncedSetSearch],
+	)
+
+	const handleFocus = useCallback(() => {
+		handlersRef.current.onFocus?.()
+	}, [])
+
+	const handleBlur = useCallback(() => {
+		handlersRef.current.onBlur?.()
+	}, [])
+
+	const handleCancel = useCallback(() => {
+		// 取消时立刻清空，避免等待 400ms 防抖导致界面停在旧结果上
+		debouncedSetSearch.cancel()
+		setSearch('')
+		handlersRef.current.onCancel?.()
+	}, [debouncedSetSearch])
+
+	// 只关心「影响原生搜索框外观/占位」的字段，函数与引用变化不算
+	const optionsKey = useMemo(
+		() =>
+			JSON.stringify({
+				placeholder: searchBarOptions?.placeholder ?? '',
+				cancelButtonText: searchBarOptions?.cancelButtonText ?? '',
+				hideWhenScrolling: searchBarOptions?.hideWhenScrolling ?? false,
+				language,
+			}),
+		[
+			searchBarOptions?.placeholder,
+			searchBarOptions?.cancelButtonText,
+			searchBarOptions?.hideWhenScrolling,
+			language,
+		],
+	)
 
 	useLayoutEffect(() => {
 		navigation.setOptions({
 			headerSearchBarOptions: {
 				...defaultSearchOptions,
 				...searchBarOptions,
+				placeholder: searchBarOptions?.placeholder,
+				cancelButtonText: searchBarOptions?.cancelButtonText,
 				onChangeText: handleOnChangeText,
-				onFocus: onFocus,
-				onBlur: onBlur,
-				onCancelButtonPress: (e) => {
-					onCancel?.()
-					searchBarOptions?.onCancelButtonPress?.(e)
-				},
+				onFocus: handleFocus,
+				onBlur: handleBlur,
+				onCancelButtonPress: handleCancel,
 			},
 		})
-	}, [defaultSearchOptions, language, navigation, onBlur, onCancel, onFocus, searchBarOptions])
+		// optionsKey 里已经包含所有会影响原生控件的字面量，避免对象引用触发重配
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [optionsKey, defaultSearchOptions, navigation, handleOnChangeText, handleFocus, handleBlur, handleCancel])
 
 	return search
 }

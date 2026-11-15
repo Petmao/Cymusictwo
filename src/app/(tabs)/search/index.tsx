@@ -11,7 +11,6 @@ import {
 } from '@/store/searchHistory'
 import i18n from '@/utils/i18n'
 import { Ionicons } from '@expo/vector-icons'
-import debounce from 'lodash/debounce'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
 	Animated,
@@ -35,6 +34,14 @@ const SEARCH_OFFSET = Platform.select({
 	android: 0,
 })
 
+/** 结果缓存：同一个关键词回来时先给旧结果，再去刷新，避免"回来一片空白" */
+const resultsCache = new Map<string, { data: Track[]; hasMore: boolean }>()
+const CACHE_LIMIT = 24
+const cacheKeyOf = (type: SearchType, query: string) => `${type}:${query}`
+
+/** 上次搜了什么：从播放页回来时用它恢复现场 */
+let lastSearchSession: { keyword: string; type: SearchType } | null = null
+
 const SearchlistsScreen = () => {
 	const colors = useThemeColors()
 	const styles = useMemo(() => createStyles(colors), [colors])
@@ -44,41 +51,77 @@ const SearchlistsScreen = () => {
 	const [isLoading, setIsLoading] = useState(false)
 	const [hasMore, setHasMore] = useState(true)
 	const searchRequestRef = useRef(0)
-	const [searchType, setSearchType] = useState<SearchType>('songs')
+	const [searchType, setSearchType] = useState<SearchType>(lastSearchSession?.type ?? 'songs')
 	// 点历史记录时用它顶替输入框内容，输入框本身不用回填
-	const [pickedKeyword, setPickedKeyword] = useState<string | null>(null)
+	const [pickedKeyword, setPickedKeyword] = useState<string | null>(lastSearchSession?.keyword ?? null)
 	const [history] = useSearchHistory()
-	const slideAnim = useRef(new Animated.Value(0)).current
+	const slideAnim = useRef(
+		new Animated.Value(lastSearchSession?.type === 'artists' ? SEGMENT_WIDTH : 0),
+	).current
 	const contentOffsetAnim = useRef(new Animated.Value(0)).current
-	const search = useNavigationSearch({
-		searchBarOptions: {
+
+	const handleSearchFocus = useCallback(() => {
+		Animated.spring(contentOffsetAnim, {
+			toValue: -SEARCH_OFFSET,
+			useNativeDriver: true,
+			tension: 100,
+			friction: 10,
+		}).start()
+	}, [contentOffsetAnim])
+
+	const handleSearchCancel = useCallback(() => {
+		// 取消搜索要连"历史/会话带进来的关键词"一起清，否则仍停在结果页
+		setPickedKeyword(null)
+		Animated.spring(contentOffsetAnim, {
+			toValue: 0,
+			useNativeDriver: true,
+			tension: 100,
+			friction: 10,
+		}).start()
+	}, [contentOffsetAnim])
+
+	// 一定要 memo：对象字面量会让原生搜索框每次渲染都被重配，输入就没反应了
+	const searchBarOptions = useMemo(
+		() => ({
 			placeholder: i18n.t('find.inSearch'),
 			cancelButtonText: i18n.t('find.cancel'),
-		},
-		onFocus: () => {
-			Animated.spring(contentOffsetAnim, {
-				toValue: -SEARCH_OFFSET,
-				useNativeDriver: true,
-				tension: 100,
-				friction: 10,
-			}).start()
-		},
-		onCancel: () => {
-			Animated.spring(contentOffsetAnim, {
-				toValue: 0,
-				useNativeDriver: true,
-				tension: 100,
-				friction: 10,
-			}).start()
-		},
+		}),
+		[],
+	)
+
+	const search = useNavigationSearch({
+		searchBarOptions,
+		onFocus: handleSearchFocus,
+		onCancel: handleSearchCancel,
 	})
 
-	// 输入框一变，就放弃历史记录带来的关键词
+	// 用户真开始打字了，就放弃历史/会话带来的关键词（挂载时 search 为空，不会误清）
 	useEffect(() => {
+		if (!search) return
 		setPickedKeyword(null)
 	}, [search])
 
 	const effectiveSearch = (pickedKeyword ?? search ?? '').trim()
+
+	const applyResults = useCallback(
+		(query: string, type: SearchType, data: Track[], moreResults: boolean, currentPage: number) => {
+			setHasMore(moreResults)
+			setSearchResults((prevResults) => (currentPage === 1 ? data : [...prevResults, ...data]))
+			setPage(currentPage)
+			lastSearchSession = { keyword: query, type }
+
+			if (currentPage === 1) {
+				const key = cacheKeyOf(type, query)
+				resultsCache.set(key, { data, hasMore: moreResults })
+				if (resultsCache.size > CACHE_LIMIT) {
+					const oldest = resultsCache.keys().next()
+					if (!oldest.done) resultsCache.delete(oldest.value)
+				}
+				if (data.length > 0) addSearchHistory(query, type)
+			}
+		},
+		[],
+	)
 
 	const fetchSearchResults = useCallback(
 		async (currentPage: number) => {
@@ -89,60 +132,65 @@ const SearchlistsScreen = () => {
 			const requestId = ++searchRequestRef.current
 			setIsLoading(true)
 
+			const run = () => searchAll(effectiveSearch, currentPage, searchType)
+
 			try {
-				const { data, hasMore: moreResults } = await searchAll(
-					effectiveSearch,
-					currentPage,
-					searchType,
-				)
+				let result
+				try {
+					result = await run()
+				} catch (firstError) {
+					// 这个接口偶尔抽风（限流 / 空 body），静默重试一次再放弃
+					console.warn('search failed once, retrying:', firstError)
+					result = await run()
+				}
 
 				if (requestId === searchRequestRef.current) {
-					setHasMore(moreResults)
-					setSearchResults((prevResults) => {
-						const newResults = currentPage === 1 ? data : [...prevResults, ...data]
-
-						return newResults
-					})
-
-					setPage(currentPage)
-
-					if (currentPage === 1 && data.length > 0) {
-						addSearchHistory(effectiveSearch, searchType)
-					}
+					applyResults(
+						effectiveSearch,
+						searchType,
+						result.data,
+						result.hasMore,
+						currentPage,
+					)
 				}
 			} catch (error) {
 				console.error('Error fetching search results:', error)
+				// 刷新失败就把上一次的结果留住，别把列表清空
+				if (requestId === searchRequestRef.current && currentPage === 1) {
+					const cached = resultsCache.get(cacheKeyOf(searchType, effectiveSearch))
+					if (cached) {
+						setSearchResults(cached.data)
+						setHasMore(cached.hasMore)
+					}
+				}
 			} finally {
 				if (requestId === searchRequestRef.current) {
 					setIsLoading(false)
 				}
 			}
 		},
-		[effectiveSearch, searchType],
+		[effectiveSearch, searchType, applyResults],
 	)
-	const debouncedFetchSearchResults = useRef(
-		debounce((currentPage: number) => {
-			fetchSearchResults(currentPage)
-		}, 300),
-	).current
-
-	useEffect(() => {
-		debouncedFetchSearchResults.cancel()
-	}, [effectiveSearch])
 
 	useEffect(() => {
 		setPage(1)
 		setHasMore(true)
-		setSearchResults([])
 		searchRequestRef.current++
 
 		if (!effectiveSearch) {
 			setIsLoading(false)
 			setHasMore(false)
 			setSearchResults([])
-		} else {
-			fetchSearchResults(1)
+			return () => {
+				searchRequestRef.current++
+			}
 		}
+
+		const cached = resultsCache.get(cacheKeyOf(searchType, effectiveSearch))
+		setSearchResults(cached?.data ?? [])
+		if (cached) setHasMore(cached.hasMore)
+
+		fetchSearchResults(1)
 
 		return () => {
 			searchRequestRef.current++
