@@ -1,0 +1,80 @@
+name: Build iOS 13.4 IPA
+
+on:
+  push:
+    branches:
+      - ios13/ui-glass
+    tags:
+      - 'v*-ios13'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    env:
+      EXPO_NO_TELEMETRY: '1'
+      CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select the newest Xcode 16 image
+        run: |
+          XCODE_APP="$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)"
+          echo "Using ${XCODE_APP}"
+          sudo xcode-select -s "${XCODE_APP}/Contents/Developer"
+          xcodebuild -version
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: yarn install --non-interactive
+
+      - name: Prebuild iOS project (Expo SDK 50 -> iOS 13.4)
+        run: npx expo prebuild --platform ios --clean --no-install
+
+      - name: Apply patches
+        run: npx patch-package
+
+      - name: Install CocoaPods
+        run: |
+          cd ios && pod install --repo-update
+
+      - name: Assert deployment target is 13.4
+        run: |
+          grep -q "platform :ios, '13.4'" ios/Podfile
+          grep -q 'IPHONEOS_DEPLOYMENT_TARGET = 13.4' ios/*.xcodeproj/project.pbxproj
+
+      - name: Build unsigned .app
+        run: |
+          xcodebuild -workspace ios/CyMusic.xcworkspace \
+            -scheme CyMusic \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            DEVELOPMENT_TEAM=""
+
+      - name: Verify bundle contents
+        run: |
+          APP=ios/build/Build/Products/Release-iphoneos/CyMusic.app
+          test -s "$APP/main.jsbundle"
+          /usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :MinimumOSVersion' "$APP/Info.plist")" = "13.4"
+
+      - name: Package IPA
+        run: |
+          mkdir -p Payload
+          cp -r ios/build/Build/Products/Release-iphoneos/CyMusic.app Payload/
+          zip -qry CyMusic-ios13.4-unsigned.ipa Payload/
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: CyMusic-ios13.4-unsigned-ipa
+          path: CyMusic-ios13.4-unsigned.ipa
+          if-no-files-found: error

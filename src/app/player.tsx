@@ -6,7 +6,7 @@ import { PlayerRepeatToggle } from '@/components/PlayerRepeatToggle'
 import { PlayerVolumeBar } from '@/components/PlayerVolumeBar'
 import { ShowPlayerListToggle } from '@/components/ShowPlayerListToggle'
 import { unknownTrackImageUri } from '@/constants/images'
-import { ThemeColors, fontSize, screenPadding } from '@/constants/tokens'
+import { ThemeColors, screenPadding, typography } from '@/constants/tokens'
 import LyricManager from '@/helpers/lyricManager'
 import myTrackPlayer from '@/helpers/trackPlayerIndex'
 import { getSingerMidBySingerName } from '@/helpers/userApi/getMusicSource'
@@ -694,13 +694,12 @@ const createStyles = (
 	},
 	trackTitleText: {
 		...defaultStyles.text,
-		fontSize: 22,
-		fontWeight: '700',
+		...typography.title,
 	},
 	trackArtistText: {
 		...defaultStyles.text,
-		fontSize: fontSize.base,
-		opacity: 0.8,
+		...typography.body,
+		color: colors.textMuted,
 		maxWidth: '90%',
 	},
 	lyricText: {

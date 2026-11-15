@@ -1,6 +1,6 @@
 import { TrackShortcutsMenu } from '@/components/TrackShortcutsMenu'
 import { unknownTrackImageUri } from '@/constants/images'
-import { ThemeColors, fontSize } from '@/constants/tokens'
+import { ThemeColors, radius, spacing, typography } from '@/constants/tokens'
 import myTrackPlayer, { isCachedIconVisibleStore } from '@/helpers/trackPlayerIndex'
 import { useThemeColors } from '@/hooks/useAppTheme'
 import { useDefaultStyles } from '@/styles'
@@ -212,46 +212,46 @@ const createStyles = (
 	StyleSheet.create({
 	trackItemContainer: {
 		flexDirection: 'row',
-		columnGap: 14,
+		columnGap: spacing.md + 2,
 		alignItems: 'center',
+		paddingVertical: spacing.xs + 2,
 		paddingRight: 0,
 	},
 	trackPlayingIconIndicator: {
 		position: 'absolute',
-		top: 18,
-		left: 16,
+		top: 20,
+		left: 20,
 		width: 16,
 		height: 16,
 	},
 	trackPausedIndicator: {
 		position: 'absolute',
-		top: 14,
-		left: 14,
+		top: 16,
+		left: 16,
 	},
 	trackArtworkImage: {
-		borderRadius: 8,
-		width: 50,
-		height: 50,
+		borderRadius: radius.sm + 2,
+		borderCurve: 'continuous',
+		width: 52,
+		height: 52,
 	},
 	trackTitleRow: {
 		flexDirection: 'row',
 		alignItems: 'center',
 	},
 	cachedIcon: {
-		marginRight: 4,
+		marginRight: spacing.xs,
 	},
 	trackTitleText: {
 		...defaultStyles.text,
-		fontSize: fontSize.sm,
-		fontWeight: '600',
+		...typography.headline,
 		flexShrink: 1,
 		maxWidth: '100%',
 	},
 	trackArtistText: {
-		...defaultStyles.text,
+		...typography.caption,
 		color: colors.textMuted,
-		fontSize: 14,
-		marginTop: 4,
-		maxWidth: '80%',
+		marginTop: spacing.xs + 1,
+		maxWidth: '82%',
 	},
 	})

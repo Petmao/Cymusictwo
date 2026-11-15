@@ -1,26 +1,29 @@
 import { FloatingPlayer } from '@/components/FloatingPlayer'
-import { BlurTint, fontSize } from '@/constants/tokens'
+import { BlurTint, elevation, fontSize, radius, spacing } from '@/constants/tokens'
 import { useAppTheme } from '@/hooks/useAppTheme'
 import i18n from '@/utils/i18n'
-import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { BlurView } from 'expo-blur'
 import { Tabs } from 'expo-router'
 import React, { useMemo } from 'react'
 import { StyleSheet } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-const TAB_BAR_HEIGHT = 49
+const TAB_BAR_HEIGHT = 54
+const TAB_BAR_MARGIN = 12
 
 const TabBarBackground = ({ tint }: { tint: BlurTint }) => (
 	<BlurView
-		intensity={90}
+		intensity={92}
 		tint={tint}
-		style={{
-			...StyleSheet.absoluteFillObject,
-			overflow: 'hidden',
-			borderTopLeftRadius: 20,
-			borderTopRightRadius: 20,
-		}}
+		style={[
+			StyleSheet.absoluteFill,
+			{
+				overflow: 'hidden',
+				borderRadius: radius.xl,
+				borderCurve: 'continuous',
+			},
+		]}
 	/>
 )
 
@@ -28,12 +31,36 @@ const TabsNavigation = () => {
 	const { bottom } = useSafeAreaInsets()
 	const { blurTint, colors } = useAppTheme()
 
-	const floatingPlayerStyle = useMemo(() => ({
-		position: 'absolute' as const,
-		left: 8,
-		right: 8,
-		bottom: TAB_BAR_HEIGHT + bottom + 8,
-	}), [bottom])
+	const tabBarStyle = useMemo(
+		() => ({
+			position: 'absolute' as const,
+			left: TAB_BAR_MARGIN,
+			right: TAB_BAR_MARGIN,
+			bottom: Math.max(bottom, spacing.sm) - 2,
+			height: TAB_BAR_HEIGHT,
+			borderRadius: radius.xl,
+			borderCurve: 'continuous' as const,
+			borderTopWidth: 0,
+			borderWidth: StyleSheet.hairlineWidth,
+			borderColor: colors.border,
+			backgroundColor: 'transparent',
+			paddingTop: 6,
+			paddingBottom: 4,
+			overflow: 'hidden' as const,
+			...elevation.pill,
+		}),
+		[bottom, colors.border],
+	)
+
+	const floatingPlayerStyle = useMemo(
+		() => ({
+			position: 'absolute' as const,
+			left: TAB_BAR_MARGIN - 2,
+			right: TAB_BAR_MARGIN - 2,
+			bottom: Math.max(bottom, spacing.sm) - 2 + TAB_BAR_HEIGHT + spacing.sm,
+		}),
+		[bottom],
+	)
 
 	return (
 		<>
@@ -42,18 +69,15 @@ const TabsNavigation = () => {
 					tabBarActiveTintColor: colors.primary,
 					tabBarInactiveTintColor: colors.textMuted,
 					tabBarLabelStyle: {
-						fontSize: fontSize.xs,
-						fontWeight: '500',
+						fontSize: fontSize.xs - 1,
+						fontWeight: '600',
+						letterSpacing: 0.1,
+					},
+					tabBarItemStyle: {
+						paddingVertical: 2,
 					},
 					headerShown: false,
-					tabBarStyle: {
-						position: 'absolute',
-						borderTopLeftRadius: 20,
-						borderTopRightRadius: 20,
-						borderTopWidth: 0,
-						paddingTop: 8,
-						backgroundColor: 'transparent',
-					},
+					tabBarStyle,
 					tabBarBackground: () => <TabBarBackground tint={blurTint} />,
 				}}
 			>
@@ -61,8 +85,12 @@ const TabsNavigation = () => {
 					name="(songs)"
 					options={{
 						title: i18n.t('appTab.songs'),
-						tabBarIcon: ({ color }) => (
-							<Ionicons name="musical-notes-sharp" size={24} color={color} />
+						tabBarIcon: ({ color, focused }) => (
+							<Ionicons
+								name={focused ? 'musical-notes' : 'musical-notes-outline'}
+								size={23}
+								color={color}
+							/>
 						),
 					}}
 				/>
@@ -70,22 +98,30 @@ const TabsNavigation = () => {
 					name="radio"
 					options={{
 						title: i18n.t('appTab.radio'),
-						tabBarIcon: ({ color }) => <Ionicons name="radio" size={24} color={color} />,
+						tabBarIcon: ({ color, focused }) => (
+							<Ionicons name={focused ? 'radio' : 'radio-outline'} size={23} color={color} />
+						),
 					}}
 				/>
 				<Tabs.Screen
 					name="favorites"
 					options={{
 						title: i18n.t('appTab.favorites'),
-						tabBarIcon: ({ color }) => <FontAwesome name="heart" size={20} color={color} />,
+						tabBarIcon: ({ color, focused }) => (
+							<Ionicons name={focused ? 'heart' : 'heart-outline'} size={23} color={color} />
+						),
 					}}
 				/>
 				<Tabs.Screen
 					name="search"
 					options={{
 						title: i18n.t('appTab.search'),
-						tabBarIcon: ({ color }) => (
-							<MaterialCommunityIcons name="text-search" size={26} color={color} />
+						tabBarIcon: ({ color, focused }) => (
+							<MaterialCommunityIcons
+								name={focused ? 'text-search' : 'text-search'}
+								size={25}
+								color={color}
+							/>
 						),
 					}}
 				/>

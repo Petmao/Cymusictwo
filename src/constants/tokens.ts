@@ -114,3 +114,52 @@ export const fontSize = {
 export const screenPadding = {
 	horizontal: 24,
 }
+
+/** 统一圆角阶梯，iOS 上配合 borderCurve: 'continuous' 使用 */
+export const radius = {
+	xs: 6,
+	sm: 10,
+	md: 14,
+	lg: 20,
+	xl: 26,
+	pill: 999,
+} as const
+
+/** 统一间距阶梯，替换散落的魔法数 */
+export const spacing = {
+	xxs: 2,
+	xs: 4,
+	sm: 8,
+	md: 12,
+	lg: 16,
+	xl: 24,
+	xxl: 32,
+} as const
+
+/** 字阶：标题、正文、说明各一档，字距统一收紧 */
+export const typography = {
+	display: { fontSize: 28, fontWeight: '700' as const, letterSpacing: -0.6 },
+	title: { fontSize: 22, fontWeight: '700' as const, letterSpacing: -0.4 },
+	headline: { fontSize: 17, fontWeight: '600' as const, letterSpacing: -0.2 },
+	body: { fontSize: 15, fontWeight: '400' as const, letterSpacing: -0.1 },
+	caption: { fontSize: 13, fontWeight: '400' as const, letterSpacing: 0 },
+	micro: { fontSize: 11, fontWeight: '500' as const, letterSpacing: 0.1 },
+} as const
+
+/** 层级阴影：卡片一档，浮层一档 */
+export const elevation = {
+	card: {
+		shadowColor: '#000000',
+		shadowOpacity: 0.12,
+		shadowRadius: 16,
+		shadowOffset: { width: 0, height: 8 },
+		elevation: 6,
+	},
+	pill: {
+		shadowColor: '#000000',
+		shadowOpacity: 0.18,
+		shadowRadius: 24,
+		shadowOffset: { width: 0, height: 10 },
+		elevation: 10,
+	},
+} as const
