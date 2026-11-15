@@ -15,7 +15,7 @@ import {
 	onScriptAction,
 	sendAction
 } from '@/components/utils/nativeModules/userApi'
-import { Buffer } from 'buffer'
+import { fromByteArray } from 'react-native-quick-base64'
 import { logError, logInfo } from '../logger'
 
 // ============================================================
@@ -314,7 +314,7 @@ const handleHttpRequest = async (reqData: RequestParams) => {
 		if (options.binary) {
 			// 二进制响应 — 转为 base64
 			const buffer = await response.arrayBuffer()
-			body = Buffer.from(buffer).toString('base64')
+			body = fromByteArray(new Uint8Array(buffer))
 		} else {
 			const text = await response.text()
 			if (contentType.includes('json')) {
@@ -403,17 +403,28 @@ const initLxMusicScript = (
 			},
 		}
 
-		// 加载脚本到 QuickJS
-		loadScript({
-			id: scriptId,
-			name: info.name || 'lx-music 音源',
-			description: info.description || '',
-			version: info.version || '',
-			author: info.author || '',
-			homepage: info.homepage || '',
-			script,
-			allowShowUpdateAlert: false,
-		})
+		// 加载脚本到 QuickJS（桥接层抛错时给出可读原因，别把 undefined 之类原样抛给用户）
+		try {
+			loadScript({
+				id: scriptId,
+				name: info.name || 'lx-music 音源',
+				description: info.description || '',
+				version: info.version || '',
+				author: info.author || '',
+				homepage: info.homepage || '',
+				script,
+				allowShowUpdateAlert: false,
+			})
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error)
+			if (removeListener) {
+				removeListener()
+				removeListener = null
+			}
+			clearTimeout(timeout)
+			scriptInitPromise = null
+			reject(new Error(`脚本装载失败：${message}`))
+		}
 	})
 }
 
