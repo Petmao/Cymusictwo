@@ -3,7 +3,6 @@ import { ThemeColors, screenPadding } from '@/constants/tokens'
 import myTrackPlayer from '@/helpers/trackPlayerIndex'
 import { useThemeColors } from '@/hooks/useAppTheme'
 import { useDefaultStyles, useUtilsStyles } from '@/styles'
-import i18n from '@/utils/i18n'
 import { isSameMediaItem } from '@/utils/mediaItem'
 
 import { getSingerMidBySingerName } from '@/helpers/userApi/getMusicSource'
@@ -30,17 +29,10 @@ const ItemDivider = memo(() => {
 	return <View style={{ ...utilsStyles.itemSeparator, marginVertical: 6, marginLeft: 64 }} />
 })
 
-const EmptyComponent = memo(() => {
-	const utilsStyles = useUtilsStyles()
-	return (
-		<View>
-			<Text style={utilsStyles.emptyContentText}>{i18n.t('find.noResults')}</Text>
-		</View>
-	)
-})
+// 空结果不再提示文字：没搜到就留白，把位置让给搜索结果页自己的历史记录
+const EmptyComponent = memo(() => null)
 
-const FooterComponent = memo(({ isLoading, hasMore }: { isLoading: boolean; hasMore: boolean }) => {
-	const utilsStyles = useUtilsStyles()
+const FooterComponent = memo(({ isLoading }: { isLoading: boolean; hasMore: boolean }) => {
 
 	if (isLoading) {
 		return (
@@ -49,13 +41,7 @@ const FooterComponent = memo(({ isLoading, hasMore }: { isLoading: boolean; hasM
 			</View>
 		)
 	}
-	if (!hasMore) {
-		return (
-			<View style={{ paddingVertical: 20 }}>
-				<Text style={utilsStyles.emptyContentText}>{i18n.t('find.noMoreResults')}</Text>
-			</View>
-		)
-	}
+	// 没有更多结果时不再显示任何文字
 	return null
 })
 

@@ -1,6 +1,6 @@
 {
 	"expo": {
-		"name": "CyMusic",
+		"name": "屿声音乐",
 		"slug": "CyMusic",
 		"version": "1.2.0",
 		"orientation": "portrait",
@@ -12,19 +12,24 @@
 			"resizeMode": "cover",
 			"backgroundColor": "#000000"
 		},
-		"assetBundlePatterns": ["**/*"],
+		"assetBundlePatterns": [
+			"**/*"
+		],
 		"ios": {
 			"supportsTablet": true,
 			"bundleIdentifier": "com.music.player.gyc",
 			"usesIcloudStorage": false,
 			"infoPlist": {
-				"UIBackgroundModes": ["audio"],
+				"UIBackgroundModes": [
+					"audio"
+				],
 				"UIFileSharingEnabled": true,
 				"LSSupportsOpeningDocumentsInPlace": true,
 				"NSAppTransportSecurity": {
 					"NSAllowsArbitraryLoads": true
 				},
-				"CADisableMinimumFrameDurationOnPhone": true
+				"CADisableMinimumFrameDurationOnPhone": true,
+				"CFBundleDisplayName": "屿声音乐"
 			},
 			"splash": {
 				"image": "./assets/splash.png",
@@ -48,7 +53,10 @@
 			[
 				"expo-share-intent",
 				{
-					"androidIntentFilters": ["text/*", "*/*"],
+					"androidIntentFilters": [
+						"text/*",
+						"*/*"
+					],
 					"iosActivationRules": {
 						"NSExtensionActivationSupportsFileWithMaxCount": 1,
 						"NSExtensionActivationSupportsWebURLWithMaxCount": 1,

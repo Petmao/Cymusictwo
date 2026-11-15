@@ -74,7 +74,7 @@ const LocalMusicScreen = () => {
 			return
 		}
 		try {
-			Alert.alert('文件已保存到: 文件 App > 我的 iPhone > CyMusic > importedLocalMusic')
+			Alert.alert('文件已保存到: 文件 App > 我的 iPhone > 屿声音乐 > importedLocalMusic')
 		} catch (error) {
 			console.error('导出过程中出错:', error)
 			Alert.alert('错误', '导出过程中出现错误，请重试。')

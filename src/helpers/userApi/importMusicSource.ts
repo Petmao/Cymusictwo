@@ -57,7 +57,7 @@ export async function createMusicApiFromScript(rawScript: string): Promise<IMusi
 				: module.exports
 
 	if (typeof exported?.getMusicUrl !== 'function') {
-		throw new Error('脚本里没有找到 getMusicUrl，请确认为 CyMusic 或 LX Music 音源')
+		throw new Error('脚本里没有找到 getMusicUrl，请确认为屿声音乐或 LX Music 音源')
 	}
 
 	return {
