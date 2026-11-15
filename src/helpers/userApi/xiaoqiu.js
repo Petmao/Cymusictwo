@@ -61,54 +61,193 @@ const headers = {
 		'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/106.0.0.0 Safari/537.36',
 	Cookie: 'uin=',
 }
-async function searchBase(query, page, type, pageSize) {
-	const res = (
-		await (0, axios.default)({
-			url: 'https://u.y.qq.com/cgi-bin/musicu.fcg',
-			method: 'POST',
-			data: {
-				req_1: {
-					method: 'DoSearchForQQMusicDesktop',
-					module: 'music.search.SearchCgiService',
-					param: {
-						num_per_page: pageSize,
-						page_num: page,
-						query: query,
-						search_type: type,
-					},
-				},
-			},
-			headers: headers,
-			xsrfCookieName: 'XSRF-TOKEN',
-			withCredentials: true,
-		})
-	).data
-	const payload = res && res.req_1 && res.req_1.data
-	const body = payload && payload.body
-	const listKey = searchTypeMap[type]
-	const list = body && body[listKey] && body[listKey].list
-	if (!Array.isArray(list)) {
-		const code = (res && res.req_1 && res.req_1.code) ?? (res && res.code)
-		throw new Error(`QQ 搜索返回异常（code=${code}），已重试仍失败`)
+// ── 搜索节流 / 缓存 ────────────────────────────────────────────────
+// QQ 的搜索接口连打三五次就会返回 code=2001 或 is_filter=-2、sum=0 的空结果，
+// 之后一段时间内怎么点都是空。所以：请求串行 + 最小间隔 + 结果缓存 + 备用接口兜底。
+const SEARCH_CACHE_TTL = 10 * 60 * 1000
+const SEARCH_MIN_GAP = 1200
+const searchCache = new Map()
+let lastSearchAt = 0
+let searchChain = Promise.resolve()
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** 所有搜索请求串成一条队列，并且两次请求之间至少隔 SEARCH_MIN_GAP */
+const enqueueSearch = (task) => {
+	const run = searchChain.then(async () => {
+		const wait = Math.max(0, SEARCH_MIN_GAP - (Date.now() - lastSearchAt))
+		if (wait > 0) await sleep(wait)
+		lastSearchAt = Date.now()
+		return task()
+	})
+	// 队列本身不能因为某次失败而断掉
+	searchChain = run.catch(() => {})
+	return run
+}
+
+const readSearchCache = (key) => {
+	const hit = searchCache.get(key)
+	if (!hit) return null
+	if (Date.now() - hit.at > SEARCH_CACHE_TTL) {
+		searchCache.delete(key)
+		return null
 	}
-	const sum = payload && payload.meta && typeof payload.meta.sum === 'number' ? payload.meta.sum : list.length
-	return {
-		isEnd: sum <= page * pageSize,
-		data: list,
+	return hit.value
+}
+
+const writeSearchCache = (key, value) => {
+	searchCache.set(key, { at: Date.now(), value })
+	if (searchCache.size > 60) {
+		const oldest = searchCache.keys().next()
+		if (!oldest.done) searchCache.delete(oldest.value)
 	}
 }
+
+async function searchBase(query, page, type, pageSize) {
+	const perPage = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 20
+	return enqueueSearch(async () => {
+		const res = (
+			await (0, axios.default)({
+				url: 'https://u.y.qq.com/cgi-bin/musicu.fcg',
+				method: 'POST',
+				timeout: 15000,
+				data: {
+					req_1: {
+						method: 'DoSearchForQQMusicDesktop',
+						module: 'music.search.SearchCgiService',
+						param: {
+							num_per_page: perPage,
+							page_num: page,
+							query: query,
+							search_type: type,
+						},
+					},
+				},
+				headers: headers,
+				// 不再带 cookie：QQ 会用 Set-Cookie 里的 uin 把后续请求串成同一个"会话"，
+				// 反而更快触发频控
+				withCredentials: false,
+			})
+		).data
+		const payload = res && res.req_1 && res.req_1.data
+		const body = payload && payload.body
+		const listKey = searchTypeMap[type]
+		const list = body && body[listKey] && body[listKey].list
+		if (!Array.isArray(list)) {
+			const code = (res && res.req_1 && res.req_1.code) ?? (res && res.code)
+			throw new Error(`QQ 搜索返回异常（code=${code}）`)
+		}
+		const sum =
+			payload && payload.meta && typeof payload.meta.sum === 'number'
+				? payload.meta.sum
+				: list.length
+		return {
+			isEnd: list.length === 0 || sum <= page * perPage,
+			data: list,
+		}
+	})
+}
+
+/** 兜底接口：smartbox 轻量联想，被搜索频控时通常还能用，拿 4~10 条 */
+async function smartboxSearch(keyword, page) {
+	if (page > 1) return []
+	return enqueueSearch(async () => {
+		const res = (
+			await (0, axios.default)({
+				url: 'https://c.y.qq.com/splcloud/fcgi-bin/smartbox_new.fcg',
+				method: 'GET',
+				timeout: 12000,
+				params: {
+					key: keyword,
+					format: 'json',
+					g_tk: 5381,
+					loginUin: 0,
+					hostUin: 0,
+					inCharset: 'utf8',
+					outCharset: 'utf-8',
+					notice: 0,
+					platform: 'yqq.json',
+					needNewCode: 0,
+				},
+				headers: {
+					Referer: 'https://y.qq.com/',
+					'User-Agent':
+						'Mozilla/5.0 (iPhone; CPU iPhone OS 15_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Mobile/15E148 Safari/604.1',
+					Cookie: 'uin=',
+				},
+				withCredentials: false,
+			})
+		).data
+		const list =
+			res && res.data && res.data.song && Array.isArray(res.data.song.itemlist)
+				? res.data.song.itemlist
+				: []
+		return list
+			.filter((item) => item && item.mid)
+			.map((item) => ({
+				id: item.mid,
+				songmid: item.mid,
+				title: item.name,
+				artist: item.singer,
+				artwork: undefined,
+				album: undefined,
+				url: 'Unknown',
+			}))
+	})
+}
+
 export async function searchMusic(query, page, pageSize) {
 	const keyword = String(query || '').trim()
-	let songs = await searchBase(keyword, page, 0, pageSize)
-	if (songs.data.length === 0) {
-		// 同一个词用 type=0 偶尔返回空列表，type=7 通常还能拿到
-		const retry = await searchBase(keyword, page, 7, pageSize)
-		if (retry.data.length > 0) songs = retry
+	if (!keyword) {
+		return { isEnd: true, data: [] }
 	}
-	return {
-		isEnd: songs.isEnd,
-		data: songs.data.map(formatMusicItem),
+
+	const cacheKey = `song:${keyword}:${page}`
+	const cached = readSearchCache(cacheKey)
+	if (cached) return cached
+
+	let items = []
+	let isEnd = true
+
+	// 主接口：musicu 搜索
+	try {
+		const primary = await searchBase(keyword, page, 0, pageSize)
+		items = primary.data.map(formatMusicItem)
+		isEnd = primary.isEnd
+	} catch (error) {
+		console.warn('[search] primary failed:', error && error.message)
 	}
+
+	// type=0 拿到空列表时换 type=7 再要一次（此时队列会自动让出间隔）
+	if (items.length === 0 && page === 1) {
+		try {
+			const alt = await searchBase(keyword, page, 7, pageSize)
+			if (alt.data.length > 0) {
+				items = alt.data.map(formatMusicItem)
+				isEnd = alt.isEnd
+			}
+		} catch (error) {
+			console.warn('[search] type=7 failed:', error && error.message)
+		}
+	}
+
+	// 还空就上兜底接口，宁可少几条也别给用户一片空白
+	if (items.length === 0) {
+		try {
+			const fallback = await smartboxSearch(keyword, page)
+			if (fallback.length > 0) {
+				items = fallback
+				isEnd = true
+			}
+		} catch (error) {
+			console.warn('[search] smartbox failed:', error && error.message)
+		}
+	}
+
+	const value = { isEnd, data: items }
+	// 有结果才缓存，空结果不缓存，用户重试还能打到真接口
+	if (items.length > 0) writeSearchCache(cacheKey, value)
+	return value
 }
 async function searchAlbum(query, page) {
 	const albums = await searchBase(query, page, 2)

@@ -37,7 +37,11 @@ const searchAll = async (
 		})) as Track[]
 	}
 
-	const hasMore = result.data.length === PAGE_SIZE
+	// 以接口回报的 isEnd 为准；没有该字段时退回按页长判断
+	const hasMore =
+		typeof (result as { isEnd?: boolean }).isEnd === 'boolean'
+			? !(result as { isEnd?: boolean }).isEnd && result.data.length > 0
+			: result.data.length === PAGE_SIZE
 
 	return {
 		data: result.data as Track[],
