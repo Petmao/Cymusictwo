@@ -21,6 +21,7 @@ function formatMusicItem(_) {
 		albumid: albumid,
 		albummid: albummid,
 		url: 'Unknown',
+		platform: 'tx',
 	}
 }
 function formatAlbumItem(_) {
@@ -192,6 +193,7 @@ async function smartboxSearch(keyword, page) {
 				artwork: undefined,
 				album: undefined,
 				url: 'Unknown',
+				platform: 'tx',
 			}))
 	})
 }
@@ -244,11 +246,144 @@ export async function searchMusic(query, page, pageSize) {
 		}
 	}
 
+	// 第三个源：酷狗（结果 platform=kw，取链时用 hash）；只在第一页兜底，避免和 QQ 的结果混在一页里
+	if (items.length === 0 && page === 1) {
+		try {
+			const kugou = await kugouSearch(keyword, page, pageSize)
+			if (kugou.data.length > 0) {
+				items = kugou.data
+				isEnd = kugou.isEnd
+			}
+		} catch (error) {
+			console.warn('[search] kugou failed:', error && error.message)
+		}
+	}
+
+	// 第四个源：网易云（结果 platform=wy）
+	if (items.length === 0 && page === 1) {
+		try {
+			const netease = await neteaseSearch(keyword, page, pageSize)
+			if (netease.data.length > 0) {
+				items = netease.data
+				isEnd = netease.isEnd
+			}
+		} catch (error) {
+			console.warn('[search] netease failed:', error && error.message)
+		}
+	}
+
 	const value = { isEnd, data: items }
 	// 有结果才缓存，空结果不缓存，用户重试还能打到真接口
 	if (items.length > 0) writeSearchCache(cacheKey, value)
 	return value
 }
+const MOBILE_UA =
+	'Mozilla/5.0 (iPhone; CPU iPhone OS 15_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Mobile/15E148 Safari/604.1'
+
+/** 第三个源：酷狗搜索（QQ 被频控时用它，hash 可直接给 LX 的 kw 源） */
+async function kugouSearch(keyword, page, pageSize) {
+	const perPage = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 20
+	return enqueueSearch(async () => {
+		const res = (
+			await (0, axios.default)({
+				url: 'https://songsearch.kugou.com/song_search_v2',
+				method: 'GET',
+				timeout: 12000,
+				params: {
+					keyword: keyword,
+					page: page,
+					pagesize: perPage,
+					platform: 'WebFilter',
+					userid: -1,
+					clientver: 2000,
+					iscorrection: 1,
+					privilege_filter: 0,
+					filter: 10,
+					area_code: 1,
+				},
+				headers: {
+					'User-Agent': MOBILE_UA,
+					Referer: 'https://www.kugou.com/',
+				},
+				withCredentials: false,
+			})
+		).data
+		const lists = res && res.data && Array.isArray(res.data.lists) ? res.data.lists : []
+		const total =
+			res && res.data && typeof res.data.total === 'number' ? res.data.total : lists.length
+		return {
+			isEnd: lists.length === 0 || total <= page * perPage,
+			data: lists
+				.filter((item) => item && item.FileHash)
+				.map((item) => ({
+					id: item.FileHash,
+					songmid: item.FileHash,
+					hash: item.FileHash,
+					title: item.SongName,
+					artist: item.SingerName,
+					album: item.AlbumName,
+					artwork: item.Image
+						? String(item.Image).replace('{size}', '240').replace('http://', 'https://')
+						: undefined,
+					url: 'Unknown',
+					platform: 'kw',
+					duration: item.Duration,
+				})),
+		}
+	})
+}
+
+/** 第四个源：网易云搜索（songmid 可直接给 LX 的 wy 源） */
+async function neteaseSearch(keyword, page, pageSize) {
+	const perPage = typeof pageSize === 'number' && pageSize > 0 ? pageSize : 20
+	const offset = Math.max(0, (page - 1) * perPage)
+	return enqueueSearch(async () => {
+		const res = (
+			await (0, axios.default)({
+				url: 'https://music.163.com/api/cloudsearch/pc',
+				method: 'GET',
+				timeout: 12000,
+				params: {
+					s: keyword,
+					type: 1,
+					offset: offset,
+					limit: perPage,
+				},
+				headers: {
+					'User-Agent': MOBILE_UA,
+					Referer: 'https://music.163.com',
+					Cookie: 'appver=2.0.2',
+				},
+				withCredentials: false,
+			})
+		).data
+		const songs = res && res.result && Array.isArray(res.result.songs) ? res.result.songs : []
+		const total =
+			res && res.result && typeof res.result.songCount === 'number'
+				? res.result.songCount
+				: songs.length
+		return {
+			isEnd: songs.length === 0 || total <= page * perPage,
+			data: songs
+				.filter((item) => item && item.id)
+				.map((item) => ({
+					id: String(item.id),
+					songmid: String(item.id),
+					title: item.name,
+					artist: (item.ar || []).map((artist) => artist.name).join(', '),
+					album: item.al && item.al.name,
+					artwork:
+						item.al && item.al.picUrl
+							? String(item.al.picUrl).replace('http://', 'https://')
+							: undefined,
+					url: 'Unknown',
+					platform: 'wy',
+					duration: item.dt ? Math.round(item.dt / 1000) : undefined,
+				})),
+		}
+	})
+}
+
 async function searchAlbum(query, page) {
 	const albums = await searchBase(query, page, 2)
 	return {

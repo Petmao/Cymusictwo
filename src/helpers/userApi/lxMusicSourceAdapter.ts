@@ -87,6 +87,8 @@ type LxRequestContext = {
 	requestKey?: string
 	requestType?: LxRequestType
 	timeoutMs?: number
+	/** 搜索结果来自哪个平台（tx / kw / wy …），用来优先匹配脚本支持的源 */
+	platform?: string
 }
 
 // 待处理的 getMusicUrl 请求映射
@@ -492,13 +494,26 @@ const getMusicUrlViaScript = (
 			requestType,
 		})
 
-		// 按脚本 init 时报的源来选，别硬写 tx（很多脚本只支持 kw/wy）
+		// 按「搜索结果来自哪个平台」优先选源，其次 tx，最后退到脚本支持的第一个源
 		const availableSources = Object.keys(scriptSourceInfo)
-		const source = availableSources.includes('tx') ? 'tx' : (availableSources[0] ?? 'tx')
-		if (source !== 'tx' && !warnedMissingTx) {
+		const preferredSource = requestContext?.platform
+		let source: string
+		if (preferredSource && availableSources.includes(preferredSource)) {
+			source = preferredSource
+		} else if (availableSources.includes('tx')) {
+			source = 'tx'
+		} else {
+			source = availableSources[0] ?? 'tx'
+		}
+		if (preferredSource && source !== preferredSource && !warnedMissingTx) {
 			warnedMissingTx = true
 			logError(
-				`[lxMusicAdapter] 该音源不支持 tx（QQ），可用源：${availableSources.join(',') || '未知'}，搜索结果来自 QQ，取链可能失败`,
+				`[lxMusicAdapter] 该音源不支持 ${preferredSource}，已回退到 ${source}；脚本可用源：${availableSources.join(',') || '未知'}`,
+			)
+		} else if (!preferredSource && source !== 'tx' && !warnedMissingTx) {
+			warnedMissingTx = true
+			logError(
+				`[lxMusicAdapter] 该音源不支持 tx（QQ），可用源：${availableSources.join(',') || '未知'}，取链可能失败`,
 			)
 		}
 		const supportedQualitys = scriptSourceInfo[source]?.qualitys ?? []

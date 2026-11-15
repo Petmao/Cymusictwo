@@ -21,6 +21,8 @@ type MusicUrlRequestContext = {
 	requestKey: string
 	requestType: ResolveSourceRequestType
 	timeoutMs: number
+	/** 搜索结果来自哪个平台：tx / kw / wy，音源脚本按它选源 */
+	platform?: string
 }
 
 const preloadCache = new Map<string, string>()
@@ -151,7 +153,12 @@ export const resolveSource = async (
 							musicItem.artist,
 							musicItem.id,
 							currentQuality,
-							{ requestKey, requestType, timeoutMs } as MusicUrlRequestContext,
+							{
+								requestKey,
+								requestType,
+								timeoutMs,
+								platform: (musicItem as { platform?: string }).platform,
+							} as MusicUrlRequestContext,
 						),
 						createTimeoutPromise(timeoutMs),
 					])
