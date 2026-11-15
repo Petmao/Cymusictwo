@@ -52,11 +52,6 @@ export const PlaylistsListModal = ({
 		() => (
 			<View>
 				<Text style={utilsStyles.emptyContentText}>No playlist found</Text>
-
-				<FastImage
-					source={{ uri: unknownTrackImageUri, priority: FastImage.priority.normal }}
-					style={utilsStyles.emptyContentImage}
-				/>
 			</View>
 		),
 		[utilsStyles],

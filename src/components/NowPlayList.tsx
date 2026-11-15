@@ -34,10 +34,6 @@ const EmptyListComponent = React.memo(() => {
 	return (
 		<View>
 			<Text style={utilsStyles.emptyContentText}>No songs</Text>
-			<FastImage
-				source={{ uri: unknownTrackImageUri, priority: FastImage.priority.normal }}
-				style={utilsStyles.emptyContentImage}
-			/>
 		</View>
 	)
 })
