@@ -85,6 +85,7 @@ const TabsNavigation = () => {
 					tabBarBackground: () => <TabBarBackground tint={blurTint} />,
 				}}
 			>
+				<Tabs.Screen name="index" options={{ href: null }} />
 				<Tabs.Screen
 					name="search"
 					options={{
