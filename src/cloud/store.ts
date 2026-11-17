@@ -1,8 +1,8 @@
 import type { Session } from '@supabase/supabase-js'
 import { create } from 'zustand'
 
-import { isCloudConfigured } from './config'
-import { supabase } from './client'
+import { getCloudConfig, saveCloudConfig } from './config'
+import { ensureCloudClient, reconfigureCloud, supabase } from './client'
 
 export type CloudProfile = {
 	id: string
@@ -45,6 +45,8 @@ type InviteResult = {
 
 type CloudState = {
 	configured: boolean
+	/** 当前生效的服务器地址，设置页要显示 */
+	serverUrl: string
 	ready: boolean
 	busy: boolean
 	error: string | null
@@ -62,7 +64,11 @@ type CloudState = {
 	membership: () => Promise<void>
 	updateNickname: (nickname: string) => Promise<void>
 	clearError: () => void
+	/** 换服务器 / 换 anon key：写本地、重建客户端、重新拉会话 */
+	configure: (url: string, anonKey: string) => Promise<void>
 }
+
+let authListenerBound = false
 
 const levelOf = (growth: number) => Math.min(5, Math.max(1, Math.floor(growth / 300) + 1))
 
@@ -112,7 +118,8 @@ const readable = (error: unknown): string => {
 }
 
 export const useCloud = create<CloudState>((set, get) => ({
-	configured: isCloudConfigured,
+	configured: getCloudConfig().configured,
+	serverUrl: getCloudConfig().url,
 	ready: false,
 	busy: false,
 	error: null,
@@ -120,28 +127,63 @@ export const useCloud = create<CloudState>((set, get) => ({
 	profile: null,
 
 	bootstrap: async () => {
-		if (!supabase) {
+		const config = getCloudConfig()
+		set({ configured: config.configured, serverUrl: config.url })
+
+		const client = ensureCloudClient()
+		if (!client) {
 			set({ ready: true })
 			return
 		}
 		try {
-			const { data } = await supabase.auth.getSession()
+			const { data } = await client.auth.getSession()
 			set({ session: data.session ?? null })
 			if (data.session?.user) {
 				await get().refreshProfile()
 			}
-			supabase.auth.onAuthStateChange((_event, session) => {
-				set({ session })
-				if (session?.user) {
-					void get().refreshProfile()
-				} else {
-					set({ profile: null })
-				}
-			})
+			if (!authListenerBound) {
+				authListenerBound = true
+				client.auth.onAuthStateChange((_event, session) => {
+					set({ session })
+					if (session?.user) {
+						void get().refreshProfile()
+					} else {
+						set({ profile: null })
+					}
+				})
+			}
 		} catch (error) {
 			set({ error: readable(error) })
 		} finally {
 			set({ ready: true })
+		}
+	},
+
+	configure: async (url, anonKey) => {
+		const cleanUrl = url.trim().replace(/\/+$/, '')
+		const cleanKey = anonKey.trim()
+		if (!/^https?:\/\//i.test(cleanUrl)) {
+			set({ error: '地址要以 http:// 或 https:// 开头' })
+			throw new Error('地址要以 http:// 或 https:// 开头')
+		}
+		if (cleanKey.length < 20) {
+			set({ error: 'anon key 长度不对，去服务器跑 scripts/gen-keys.mjs 再复制' })
+			throw new Error('anon key 长度不对')
+		}
+
+		saveCloudConfig(cleanUrl, cleanKey)
+		set({ busy: true, error: null, session: null, profile: null, serverUrl: cleanUrl })
+		try {
+			const client = reconfigureCloud(cleanUrl, cleanKey)
+			const { data } = await client.auth.getSession()
+			set({ configured: true, session: data.session ?? null })
+			if (data.session?.user) await get().refreshProfile()
+			set({ ready: true })
+		} catch (error) {
+			set({ error: readable(error) })
+			throw error
+		} finally {
+			set({ busy: false })
 		}
 	},
 

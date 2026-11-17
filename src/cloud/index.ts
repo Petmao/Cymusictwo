@@ -1,5 +1,16 @@
-export { CLOUD_ANON_KEY, CLOUD_SCHEMA_VERSION, CLOUD_URL, MAX_DEVICES, isCloudConfigured } from './config'
-export { requireClient, supabase } from './client'
+export {
+	CLOUD_ANON_KEY,
+	CLOUD_SCHEMA_VERSION,
+	CLOUD_URL,
+	DEFAULT_CLOUD_URL,
+	MAX_DEVICES,
+	clearCloudConfig,
+	getCloudConfig,
+	isCloudConfigured,
+	saveCloudConfig,
+	type CloudConfig,
+} from './config'
+export { ensureCloudClient, reconfigureCloud, requireClient, supabase } from './client'
 export { useCloud, type CloudProfile } from './store'
 export {
 	getDeviceInfo,

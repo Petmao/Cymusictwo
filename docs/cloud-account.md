@@ -231,3 +231,25 @@ insert into public.redeem_codes (code, days) values ('YS-SVIP-30-BBBB', 30);
 | `SELF` | 填了自己的邀请码 |
 | `CODE_INVALID` | 卡密无效或已用 |
 | `NOT_AUTHENTICATED` | 没登录 |
+
+---
+
+## 11. 自建服务器与 App 的对接方式
+
+默认服务器地址写死在 `src/cloud/config.ts` 的 `DEFAULT_CLOUD_URL`，当前是 `https://ys.irepo.cn`。
+
+配置优先级（高 → 低）：
+
+1. App 内「我的 → 账号与云同步 → 服务器」里填的地址与 anon key（存 MMKV `cloud.url` / `cloud.anonKey`）
+2. 构建期注入的 `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+3. `DEFAULT_CLOUD_URL`
+
+换服务器或换 key 都不用重编包：账号页底部「服务器」→ 改地址 / 粘 key → 保存并连接，客户端当场重建（`reconfigureCloud`），旧服务器会话会被登出。
+
+`anon key` 与服务器 `.env` 里的 `JWT_SECRET` 必须同源，否则 PostgREST 一律 401。服务器上跑：
+
+```bash
+node scripts/gen-keys.mjs   # 打印 ANON_KEY 与 SERVICE_ROLE_KEY
+```
+
+`ANON_KEY` 给 App，`SERVICE_ROLE_KEY` 只留在服务器，不进包。

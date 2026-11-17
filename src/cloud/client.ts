@@ -4,37 +4,74 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { AppState } from 'react-native'
 
-import { CLOUD_ANON_KEY, CLOUD_URL, isCloudConfigured } from './config'
+import { getCloudConfig } from './config'
 
 /**
  * Supabase 客户端（Apache-2.0 开源后端：Postgres + Auth + RLS）。
- * 没有配置环境变量时返回 null，调用方一律先判空。
+ *
+ * 这里是 `let` 而不是 const：服务器地址与 anon key 允许在 App 里改，
+ * 改完就地重建客户端，不用重启。引用方写 `supabase.xxx` 会拿到最新值。
  */
-export const supabase: SupabaseClient | null = isCloudConfigured
-	? createClient(CLOUD_URL, CLOUD_ANON_KEY, {
-			auth: {
-				storage: AsyncStorage,
-				autoRefreshToken: true,
-				persistSession: true,
-				detectSessionInUrl: false,
-			},
-		})
-	: null
+export let supabase: SupabaseClient | null = null
 
-/** RN 里没有页面跳转，token 刷新要靠 AppState 手动驱动 */
-if (supabase) {
+/** 最近一次建客户端用的地址，用来判断是否真的换了服务器 */
+let activeUrl = ''
+let autoRefreshBound = false
+
+const bindAutoRefresh = () => {
+	if (autoRefreshBound) return
+	autoRefreshBound = true
+	// RN 里没有页面跳转，token 刷新要靠 AppState 手动驱动
 	AppState.addEventListener('change', (state) => {
-		if (state === 'active') {
-			supabase.auth.startAutoRefresh()
-		} else {
-			supabase.auth.stopAutoRefresh()
-		}
+		if (!supabase) return
+		if (state === 'active') supabase.auth.startAutoRefresh()
+		else supabase.auth.stopAutoRefresh()
 	})
 }
 
-export const requireClient = (): SupabaseClient => {
-	if (!supabase) {
-		throw new Error('云端未配置：缺少 EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY')
-	}
-	return supabase
+export const buildCloudClient = (url: string, anonKey: string): SupabaseClient => {
+	const client = createClient(url, anonKey, {
+		auth: {
+			storage: AsyncStorage,
+			autoRefreshToken: true,
+			persistSession: true,
+			detectSessionInUrl: false,
+		},
+	})
+	supabase = client
+	activeUrl = url
+	bindAutoRefresh()
+	return client
 }
+
+/** 按当前配置（本地覆盖 / 构建期 / 默认）确保客户端存在 */
+export const ensureCloudClient = (): SupabaseClient | null => {
+	const config = getCloudConfig()
+	if (!config.configured) {
+		supabase = null
+		activeUrl = ''
+		return null
+	}
+	if (supabase && activeUrl === config.url) return supabase
+	return buildCloudClient(config.url, config.anonKey)
+}
+
+/** 换服务器 / 换 key 时调用：重建客户端并返回 */
+export const reconfigureCloud = (url: string, anonKey: string): SupabaseClient => {
+	// 换服务器前先把旧会话清掉，避免带着旧 token 打新库
+	if (supabase && activeUrl !== url) {
+		void supabase.auth.signOut().catch(() => undefined)
+	}
+	return buildCloudClient(url, anonKey)
+}
+
+export const requireClient = (): SupabaseClient => {
+	const client = supabase ?? ensureCloudClient()
+	if (!client) {
+		throw new Error('云端未配置：先去「账号与云同步 → 服务器设置」填地址与 anon key')
+	}
+	return client
+}
+
+// 启动时按配置先建一次（没配就是 null，调用方一律判空）
+ensureCloudClient()

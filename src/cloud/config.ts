@@ -1,14 +1,79 @@
+import getOrCreateMMKV from '@/store/getOrCreateMMKV'
+
 /**
  * 云端配置。
  *
- * 走 Expo 的 EXPO_PUBLIC_ 前缀注入（构建期内联，运行时读不到也没关系）。
- * 在 .env / CI Secrets 里给这两个值就会自动启用；缺一个就整体降级成"本地模式"，
- * 所有云函数变成 no-op，不会崩。
+ * 优先级：App 内「服务器设置」里存的 > 构建期注入的 EXPO_PUBLIC_* > 默认地址。
+ * 默认地址就是自建服务端 `https://ys.irepo.cn`；anon key 必须与服务器上的 JWT_SECRET 同源，
+ * 所以 key 允许在 App 里手动粘一次，存在本地 MMKV，换 key 不用重编包。
  */
-export const CLOUD_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? ''
-export const CLOUD_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? ''
 
-export const isCloudConfigured = CLOUD_URL.startsWith('http') && CLOUD_ANON_KEY.length > 20
+const STORE_ID = 'appPersistStatus'
+const URL_KEY = 'cloud.url'
+const KEY_KEY = 'cloud.anonKey'
+
+export const DEFAULT_CLOUD_URL = 'https://ys.irepo.cn'
+
+const read = (key: string): string => {
+	try {
+		return getOrCreateMMKV(STORE_ID).getString(key) ?? ''
+	} catch {
+		return ''
+	}
+}
+
+const write = (key: string, value: string) => {
+	try {
+		const store = getOrCreateMMKV(STORE_ID)
+		if (value) store.set(key, value)
+		else store.delete(key)
+	} catch {
+		// MMKV 还没就绪时静默跳过
+	}
+}
+
+const normalizeUrl = (value: string) => value.trim().replace(/\/+$/, '')
+
+export type CloudConfig = {
+	url: string
+	anonKey: string
+	configured: boolean
+	/** 配置来源，设置页要显示「用的是什么」 */
+	source: 'local' | 'build' | 'default'
+}
+
+export const getCloudConfig = (): CloudConfig => {
+	const storedUrl = read(URL_KEY)
+	const storedKey = read(KEY_KEY)
+	const envUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? ''
+	const envKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? ''
+
+	const url = normalizeUrl(storedUrl || envUrl || DEFAULT_CLOUD_URL)
+	const anonKey = (storedKey || envKey || '').trim()
+	const source: CloudConfig['source'] = storedUrl || storedKey ? 'local' : envKey ? 'build' : 'default'
+
+	return {
+		url,
+		anonKey,
+		configured: url.startsWith('http') && anonKey.length > 20,
+		source,
+	}
+}
+
+export const saveCloudConfig = (url: string, anonKey: string) => {
+	write(URL_KEY, normalizeUrl(url))
+	write(KEY_KEY, anonKey.trim())
+}
+
+export const clearCloudConfig = () => {
+	write(URL_KEY, '')
+	write(KEY_KEY, '')
+}
+
+/** 构建期常量，只用于展示与默认值；运行时判断走 getCloudConfig() */
+export const CLOUD_URL = getCloudConfig().url
+export const CLOUD_ANON_KEY = getCloudConfig().anonKey
+export const isCloudConfigured = getCloudConfig().configured
 
 /** 云同步协议版本，将来改表结构时用来做迁移判断 */
 export const CLOUD_SCHEMA_VERSION = 1

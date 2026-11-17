@@ -6,6 +6,7 @@ import {
 	svipDaysLeft,
 	useCloud,
 } from '@/cloud'
+import { DEFAULT_CLOUD_URL } from '@/cloud/config'
 import { registerCurrentDevice } from '@/cloud/device'
 import { syncNow } from '@/cloud/sync'
 import { Ionicons } from '@expo/vector-icons'
@@ -31,6 +32,8 @@ const AccountScreen = () => {
 	const insets = useSafeAreaInsets()
 
 	const configured = useCloud((s) => s.configured)
+	const serverUrl = useCloud((s) => s.serverUrl)
+	const configure = useCloud((s) => s.configure)
 	const session = useCloud((s) => s.session)
 	const profile = useCloud((s) => s.profile)
 	const busy = useCloud((s) => s.busy)
@@ -45,6 +48,10 @@ const AccountScreen = () => {
 	const [password, setPassword] = useState('')
 	const [code, setCode] = useState('')
 	const [syncing, setSyncing] = useState(false)
+	const [editingServer, setEditingServer] = useState(!configured)
+	const [serverInput, setServerInput] = useState(serverUrl || DEFAULT_CLOUD_URL)
+	const [keyInput, setKeyInput] = useState('')
+	const [savingServer, setSavingServer] = useState(false)
 	const [syncTip, setSyncTip] = useState<string | null>(null)
 
 	const loggedIn = Boolean(session?.user)
@@ -85,17 +92,90 @@ const AccountScreen = () => {
 		}
 	}
 
-	if (!configured) {
+	const handleSaveServer = async () => {
+		setSavingServer(true)
+		try {
+			await configure(serverInput, keyInput)
+			setEditingServer(false)
+			setKeyInput('')
+			Alert.alert('已连接', `服务器：${serverInput.trim().replace(/\/+$/, '')}`)
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err)
+			Alert.alert('连接失败', message)
+		} finally {
+			setSavingServer(false)
+		}
+	}
+
+	const serverHost = (serverUrl || DEFAULT_CLOUD_URL).replace(/^https?:\/\//, '')
+
+	if (editingServer) {
 		return (
-			<View style={[styles.container, { paddingTop: insets.top + 20 }]}>
-				<Text style={styles.title}>账号与云同步</Text>
-				<View style={styles.card}>
-					<Text style={styles.hint}>
-						云端还没配置。构建时给 `EXPO_PUBLIC_SUPABASE_URL` 与 `EXPO_PUBLIC_SUPABASE_ANON_KEY`，
-						再把 `supabase/migrations` 里的 SQL 执行一遍就能用。
-					</Text>
-				</View>
-			</View>
+			<KeyboardAvoidingView
+				style={styles.container}
+				behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+			>
+				<ScrollView
+					contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }}
+					keyboardShouldPersistTaps="handled"
+				>
+					<View style={styles.header}>
+						<Pressable
+							hitSlop={12}
+							onPress={() => (configured ? setEditingServer(false) : router.back())}
+						>
+							<Ionicons name="chevron-back" size={22} color={colors.primary} />
+						</Pressable>
+						<Text style={styles.title}>服务器设置</Text>
+						<View style={{ width: 22 }} />
+					</View>
+
+					<View style={styles.card}>
+						<Text style={styles.label}>服务器地址</Text>
+						<TextInput
+							value={serverInput}
+							onChangeText={setServerInput}
+							style={styles.input}
+							placeholder={DEFAULT_CLOUD_URL}
+							placeholderTextColor={colors.placeholder}
+							autoCapitalize="none"
+							autoCorrect={false}
+							keyboardType="url"
+						/>
+
+						<Text style={[styles.label, { marginTop: 12 }]}>anon key</Text>
+						<TextInput
+							value={keyInput}
+							onChangeText={setKeyInput}
+							style={[styles.input, { minHeight: 76 }]}
+							placeholder="eyJhbGciOiJIUzI1NiIs…"
+							placeholderTextColor={colors.placeholder}
+							autoCapitalize="none"
+							autoCorrect={false}
+							multiline
+						/>
+
+						<Text style={styles.hint}>
+							在服务器上跑 `node scripts/gen-keys.mjs`，把输出的 ANON_KEY 整行粘到上面。
+							地址默认就是 {DEFAULT_CLOUD_URL}，部署到别的域名再改这里。
+						</Text>
+
+						<Pressable
+							style={[styles.primaryButton, { marginTop: 14, opacity: savingServer ? 0.6 : 1 }]}
+							onPress={handleSaveServer}
+							disabled={savingServer}
+						>
+							{savingServer ? (
+								<ActivityIndicator size="small" color="#FFFFFF" />
+							) : (
+								<Text style={styles.primaryButtonText}>保存并连接</Text>
+							)}
+						</Pressable>
+					</View>
+
+					{error ? <Text style={styles.errorText}>{error}</Text> : null}
+				</ScrollView>
+			</KeyboardAvoidingView>
 		)
 	}
 
@@ -261,6 +341,17 @@ const AccountScreen = () => {
 								<Text style={styles.actionText}>授权设备</Text>
 								<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
 							</Pressable>
+
+							<View style={styles.divider} />
+
+							<Pressable style={styles.actionRow} onPress={() => setEditingServer(true)}>
+								<Ionicons name="server-outline" size={18} color={colors.primary} />
+								<Text style={styles.actionText}>服务器</Text>
+								<Text style={styles.serverValue} numberOfLines={1}>
+									{serverHost}
+								</Text>
+								<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+							</Pressable>
 						</View>
 
 						<Pressable
@@ -399,6 +490,16 @@ const createStyles = (colors: ThemeColors) =>
 			paddingVertical: spacing.sm,
 		},
 		actionText: { flex: 1, color: colors.text, fontSize: 15 },
+		serverValue: { fontSize: 12, color: colors.textMuted, maxWidth: 160, marginRight: 6 },
+		primaryButton: {
+			height: 46,
+			borderRadius: radius.pill ?? 999,
+			backgroundColor: colors.primary,
+			alignItems: 'center',
+			justifyContent: 'center',
+		},
+		primaryButtonText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
+		errorText: { marginTop: 10, marginHorizontal: 16, fontSize: 12, color: colors.error },
 		syncTip: { color: colors.textMuted, fontSize: 12, marginTop: 6, lineHeight: 18 },
 		divider: {
 			height: StyleSheet.hairlineWidth,

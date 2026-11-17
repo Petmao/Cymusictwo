@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg'
 import { GradientScreen } from '@/components/GradientScreen'
 import { radius, spacing, strokeWidth, typography } from '@/constants/tokens'
-import { isCloudConfigured, isSvipProfile, useCloud } from '@/cloud'
+import { isSvipProfile, useCloud } from '@/cloud'
 import { useVideoSources } from '@/store/videoSources'
 
 const VideoScreen = () => {
@@ -17,9 +17,10 @@ const VideoScreen = () => {
 	const sources = useVideoSources()
 	const session = useCloud((state) => state.session)
 	const profile = useCloud((state) => state.profile)
+	const cloudReady = useCloud((state) => state.configured)
 
 	// 云端配好之后视频就是 SVIP 专属；没配 Supabase 时保持本地模式，本地源照常能放
-	const locked = isCloudConfigured && !isSvipProfile(profile)
+	const locked = cloudReady && !isSvipProfile(profile)
 	const hasSources = sources.length > 0
 
 	const styles = useMemo(() => createStyles(), [])
