@@ -136,6 +136,8 @@ begin
   end;
 
   return jsonb_build_object(
+    'nickname', p.nickname,
+    'avatar_url', p.avatar_url,
     'plan', p.plan,
     'svip', public.is_svip(v_uid),
     'expires_at', p.svip_expires_at,

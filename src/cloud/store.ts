@@ -201,7 +201,8 @@ export const useCloud = create<CloudState>((set, get) => ({
 		if (!snapshot.error && snapshot.data) {
 			const row = asJson(snapshot.data)
 			if (row && row.plan) {
-				set({ profile: mapProfile({ id: uid, ...row }) })
+				// 快照只带会员字段，昵称头像从旧档案补，避免闪一下默认名
+				set({ profile: mapProfile({ ...(get().profile ?? {}), id: uid, ...row }) })
 				return
 			}
 		}
