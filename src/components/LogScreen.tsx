@@ -1,9 +1,10 @@
 import { ThemeColors, fontSize, screenPadding } from '@/constants/tokens'
 import { useThemeColors } from '@/hooks/useAppTheme'
 import { logError, useLoggerHook } from '@/helpers/logger'
+import { clearFatalLog, getFatalLog, type FatalEntry } from '@/helpers/crashLog'
 import i18n from '@/utils/i18n'
 import { Ionicons } from '@expo/vector-icons'
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
 	Alert,
 	Animated,
@@ -25,6 +26,11 @@ const LogScreen = () => {
 	const styles = useMemo(() => createStyles(colors), [colors])
 	const { logs, clearLogs } = useLoggerHook()
 	const [selectedLog, setSelectedLog] = useState<null | any>(null)
+	// 启动期致命错误（上次崩溃前落盘的），比内存日志更能说明问题
+	const [fatals, setFatals] = useState<FatalEntry[]>([])
+	useEffect(() => {
+		setFatals(getFatalLog())
+	}, [])
 	const fadeAnim = useRef(new Animated.Value(0)).current
 	const handleShare = async () => {
 		const logText = logs.map((log) => `[${log.timestamp}] [${log.level}] ${log.message}`).join('\n')
@@ -94,7 +100,14 @@ const LogScreen = () => {
 							<Ionicons name="share-social-outline" size={20} color={colors.text} />
 							<Text style={styles.buttonText}>{i18n.t('logScreen.actions.share')}</Text>
 						</TouchableOpacity>
-						<TouchableOpacity onPress={clearLogs} style={styles.iconButton}>
+						<TouchableOpacity
+							onPress={() => {
+								clearLogs()
+								clearFatalLog()
+								setFatals([])
+							}}
+							style={styles.iconButton}
+						>
 							<Ionicons name="trash-outline" size={20} color={colors.text} />
 							<Text style={styles.buttonText}>{i18n.t('logScreen.actions.clear')}</Text>
 						</TouchableOpacity>
@@ -104,6 +117,30 @@ const LogScreen = () => {
 					data={logs}
 					keyExtractor={(item, index) => index.toString()}
 					renderItem={renderItem}
+					ListHeaderComponent={
+						fatals.length > 0 ? (
+							<View style={styles.fatalBox}>
+								<Text style={styles.fatalTitle}>上次启动的异常（{fatals.length}）</Text>
+								{fatals
+									.slice()
+									.reverse()
+									.map((item, index) => (
+										<Text
+											key={`${item.at}-${index}`}
+											style={styles.fatalText}
+											onPress={() => {
+												Clipboard.setString(
+													`${item.at} [${item.where}] ${item.message}\n${item.stack ?? ''}`,
+												)
+												Alert.alert(i18n.t('logScreen.copy'), i18n.t('logScreen.copyMessage'))
+											}}
+										>
+											{`${item.at.slice(11, 19)} ${item.where} · ${item.message}`}
+										</Text>
+									))}
+							</View>
+						) : null
+					}
 					ListEmptyComponent={<Text style={styles.emptyText}>{i18n.t('logScreen.empty')}</Text>}
 					contentContainerStyle={logs.length === 0 && styles.emptyContainer}
 					style={styles.flatList}
@@ -218,6 +255,27 @@ const createStyles = (colors: ThemeColors) =>
 	emptyText: {
 		fontSize: fontSize.base,
 		color: colors.textMuted,
+	},
+	fatalBox: {
+		marginHorizontal: screenPadding.horizontal,
+		marginBottom: 12,
+		padding: 12,
+		borderRadius: 10,
+		borderWidth: 1,
+		borderColor: colors.toastAccent,
+		backgroundColor: colors.surface,
+	},
+	fatalTitle: {
+		fontSize: fontSize.sm,
+		fontWeight: '600',
+		color: colors.toastAccent,
+		marginBottom: 6,
+	},
+	fatalText: {
+		fontSize: fontSize.xs,
+		color: colors.text,
+		lineHeight: 16,
+		marginTop: 4,
 	},
 	modalOverlay: {
 		flex: 1,
