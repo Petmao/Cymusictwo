@@ -8,16 +8,45 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg'
 import { GradientScreen } from '@/components/GradientScreen'
 import { radius, spacing, strokeWidth, typography } from '@/constants/tokens'
+import { isCloudConfigured, isSvipProfile, useCloud } from '@/cloud'
 import { useVideoSources } from '@/store/videoSources'
 
 const VideoScreen = () => {
 	const { colors, gradients } = useAppTheme()
 	const insets = useSafeAreaInsets()
 	const sources = useVideoSources()
+	const session = useCloud((state) => state.session)
+	const profile = useCloud((state) => state.profile)
 
+	// 云端配好之后视频就是 SVIP 专属；没配 Supabase 时保持本地模式，本地源照常能放
+	const locked = isCloudConfigured && !isSvipProfile(profile)
 	const hasSources = sources.length > 0
 
 	const styles = useMemo(() => createStyles(), [])
+
+	if (locked) {
+		return (
+			<GradientScreen>
+				<View style={styles.empty}>
+					<View style={[styles.lockCircle, { backgroundColor: gradients.glow }]}>
+						<Ionicons name="lock-closed" size={44} color={gradients.textGlow[0]} />
+					</View>
+					<Text style={styles.line1}>视频是 SVIP 专属</Text>
+					<Text style={[styles.lockHint, { color: colors.textMuted }]}>
+						开通后可用云端视频源，换设备也能接着看
+					</Text>
+					<TouchableOpacity
+						activeOpacity={0.86}
+						onPress={() => router.push('/(modals)/account' as never)}
+					>
+						<View style={styles.pillBtn}>
+							<Text style={styles.pillText}>{session ? '去开通 SVIP' : '去登录'}</Text>
+						</View>
+					</TouchableOpacity>
+				</View>
+			</GradientScreen>
+		)
+	}
 
 	return (
 		<GradientScreen>
@@ -199,6 +228,22 @@ const createStyles = () =>
 			fontSize: 17,
 			fontWeight: '700',
 			letterSpacing: -0.2,
+			color: '#FFFFFF',
+		},
+		lockCircle: {
+			width: 108,
+			height: 108,
+			borderRadius: 54,
+			alignItems: 'center',
+			justifyContent: 'center',
+			marginBottom: spacing.lg,
+		},
+		lockHint: {
+			marginTop: spacing.sm,
+			marginBottom: spacing.lg,
+			fontSize: 13,
+			textAlign: 'center',
+			lineHeight: 19,
 		},
 		line2: {
 			marginTop: spacing.sm,

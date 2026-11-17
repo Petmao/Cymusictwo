@@ -1,4 +1,4 @@
-import { formatSvipExpire, isSvipProfile, svipDaysLeft, useCloud } from '@/cloud'
+import { formatSvipExpire, growthProgress, isSvipProfile, svipDaysLeft, useCloud } from '@/cloud'
 import { GradientScreen } from '@/components/GradientScreen'
 import { GradientText } from '@/components/GradientText'
 import { radius, spacing, strokeWidth, typography } from '@/constants/tokens'
@@ -15,8 +15,6 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import React, { useMemo } from 'react'
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-
-const GROWTH_TARGET = 1000
 
 type ActionPill = {
 	key: string
@@ -40,18 +38,121 @@ const MineScreen = () => {
 
 	const version = Constants.expoConfig?.version ?? '1.2.0'
 	const isSvip = isSvipProfile(profile)
-	const expireText = session ? (isSvip ? `${formatSvipExpire(profile)} 到期` : '未开通') : '未登录'
+	const expireText = session ? (isSvip ? `${formatSvipExpire(profile)} 到期` : '未开通 SVIP') : '未登录'
 	const daysLeft = session && isSvip ? svipDaysLeft(profile) : 0
-	const points = profile?.points ?? 620
-	const growth = Math.min(points, GROWTH_TARGET)
-	const level = growth >= 900 ? 4 : growth >= 600 ? 3 : growth >= 300 ? 2 : 1
+	const points = profile?.points ?? 0
+	const growth = profile?.growth ?? 0
+	const growthInfo = growthProgress(growth)
+	const level = growthInfo.level
 	const cloudValue = session
 		? isSvip
 			? `SVIP · ${formatSvipExpire(profile)}`
 			: '未开通 SVIP'
 		: '未登录'
 
+	const redeemCode = useCloud((state) => state.redeemCode)
+	const checkIn = useCloud((state) => state.checkIn)
+	const applyInvite = useCloud((state) => state.applyInvite)
+
 	const goAccount = () => router.push('/(modals)/account' as never)
+
+	const requireLogin = () => {
+		if (session) return true
+		Alert.alert('还没登录', '登录后才能用会员功能', [
+			{ text: '稍后', style: 'cancel' },
+			{ text: '去登录', onPress: goAccount },
+		])
+		return false
+	}
+
+	const handleRedeem = async () => {
+		if (!requireLogin()) return
+		Alert.prompt(
+			'卡密兑换',
+			'输入卡密，开通或续期 SVIP',
+			[
+				{ text: '取消', style: 'cancel' },
+				{
+					text: '兑换',
+					onPress: async (raw) => {
+						const code = raw?.trim() ?? ''
+						if (!code) return
+						try {
+							const expire = await redeemCode(code)
+							showToast(`SVIP 已开通至 ${String(expire).slice(0, 10)}`)
+						} catch (error) {
+							const message = error instanceof Error ? error.message : String(error)
+							Alert.alert('兑换失败', message)
+						}
+					},
+				},
+			],
+			'plain-text',
+		)
+	}
+
+	const handleCheckIn = async () => {
+		if (!requireLogin()) return
+		if (profile?.checkedInToday) {
+			showToast(`今天已签到，连续 ${profile.streak} 天`)
+			return
+		}
+		try {
+			const result = await checkIn()
+			if (result.ok) {
+				showToast(`签到 +${result.gained} 积分 · 连续 ${result.streak} 天`)
+			} else if (result.reason === 'ALREADY') {
+				showToast('今天已经签过了')
+			} else {
+				showToast('签到失败，稍后再试')
+			}
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error)
+			Alert.alert('签到失败', message)
+		}
+	}
+
+	const handleInvite = () => {
+		if (!requireLogin()) return
+		const code = profile?.inviteCode ?? '——'
+		Alert.alert('邀请好友', `你的邀请码：${code}\n好友用这个码注册后填入，双方都能拿积分和成长值。`, [
+			{ text: '知道了', style: 'cancel' },
+			{
+				text: '填写好友邀请码',
+				onPress: () =>
+					Alert.prompt(
+						'填写邀请码',
+						'每个账号只能绑定一次',
+						[
+							{ text: '取消', style: 'cancel' },
+							{
+								text: '绑定',
+								onPress: async (raw) => {
+									const input = raw?.trim() ?? ''
+									if (!input) return
+									try {
+										const result = await applyInvite(input)
+										if (result.ok) {
+											showToast(`已绑定 ${result.inviter ?? '好友'}，+${result.points ?? 0} 积分`)
+										} else if (result.reason === 'ALREADY_INVITED') {
+											showToast('这台账号已经绑定过邀请人了')
+										} else if (result.reason === 'CODE_NOT_FOUND') {
+											showToast('邀请码不存在')
+										} else {
+											showToast('绑定失败')
+										}
+									} catch (error) {
+										const message = error instanceof Error ? error.message : String(error)
+										Alert.alert('绑定失败', message)
+									}
+								},
+							},
+						],
+						'plain-text',
+					),
+			},
+		])
+	}
 
 	const pills: ActionPill[] = [
 		{
@@ -59,22 +160,21 @@ const MineScreen = () => {
 			label: '卡密兑换',
 			icon: 'ticket-outline',
 			colorsKey: 'rose',
-			onPress: goAccount,
+			onPress: handleRedeem,
 		},
 		{
 			key: 'checkin',
 			label: '签到',
 			icon: 'calendar-outline',
 			colorsKey: 'roseLight',
-			onPress: () => showToast('今日已签到，积分 +5'),
+			onPress: handleCheckIn,
 		},
 		{
 			key: 'invite',
 			label: '邀请好友',
 			icon: 'person-add-outline',
 			colorsKey: 'violet',
-			onPress: () =>
-				Alert.alert('邀请好友', `把你的邀请码发给朋友：YS-${(profile?.id ?? 'GUEST').slice(0, 6).toUpperCase()}`),
+			onPress: handleInvite,
 		},
 	]
 
@@ -124,6 +224,7 @@ const MineScreen = () => {
 				showsVerticalScrollIndicator={false}
 			>
 				{/* 会员卡：1.5pt 金边 + 深金渐变底 */}
+				<TouchableOpacity activeOpacity={0.92} onPress={goAccount}>
 				<LinearGradient
 					colors={gradients.gold}
 					start={{ x: 0, y: 0 }}
@@ -152,14 +253,16 @@ const MineScreen = () => {
 									end={{ x: 1, y: 0 }}
 									style={[
 										styles.growthFill,
-										{ width: `${Math.round((growth / GROWTH_TARGET) * 100)}%` },
+										{ width: `${Math.round(growthInfo.ratio * 100)}%` },
 									]}
 								/>
 							</View>
 							<Text style={styles.levelText}>Lv.{level}</Text>
 						</View>
 						<Text style={styles.growthCaption}>
-							成长值 {growth} / {GROWTH_TARGET}
+							{level >= 5
+								? `成长值 ${growth} · 已满级`
+								: `成长值 ${growth} / ${growthInfo.next} · 距 Lv.${level + 1} 还差 ${growthInfo.remaining}`}
 						</Text>
 
 						<View style={styles.vipStats}>
@@ -177,6 +280,7 @@ const MineScreen = () => {
 						</View>
 					</View>
 				</LinearGradient>
+				</TouchableOpacity>
 
 				{/* 三胶囊 */}
 				<View style={styles.pillRow}>

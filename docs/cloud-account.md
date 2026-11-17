@@ -168,3 +168,66 @@ src/app/(modals)/devices.tsx   授权设备列表与撤销
 | `DEVICE_LIMIT` | 活跃设备 5 台已满，去授权设备页撤销 |
 | 视频页空但已开 SVIP | 检查 `video_sources` 是否有 `enabled = true` 的行，且 `owner_id is null` 或等于自己 |
 | 同步后歌单变多 | 正常：并集合并，两台设备各自的歌单都会保留 |
+
+---
+
+## 10. 会员体系（20261117203000_membership.sql）
+
+第二份迁移在上面那套账号表上补齐「会员」：成长值、等级、签到、邀请、卡密续期、视频卡点。
+执行顺序：先跑 `20261117000000_cloud_account.sql`，再跑 `20261117203000_membership.sql`。
+
+### 数据与规则
+
+| 项 | 规则 |
+|---|---|
+| 付费层级 | 只有 `svip`，没有其它档位；`plan` 字段 check 约束已经锁死 |
+| 成长值 | 签到 +10（连续第 n 天再 +2(n-1)，封顶 +20）；卡密 +天数；邀请 +20（被邀请）/ +50（邀请人） |
+| 等级 | 每 300 成长值一级，封顶 Lv.5，函数 `growth_level()` |
+| 签到 | `daily_check_in()`：按 `last_check_in_at` 判当天只能一次，连续天数自动累加 |
+| 邀请 | 每人 8 位邀请码（`invite_code`，触发器自动生成）；`apply_invite()` 每个账号只能绑一次，不能填自己 |
+| 卡密 | `redeem_code()` 续期逻辑不变（取「原到期」与「现在」的较大者 + N 天），额外把成长值 +N |
+| 客户端改不动 | `guard_profile_update` 现在会把 `plan / svip_expires_at / points / growth / invite_code / invited_by / last_check_in_at / check_in_streak` 全部还原，只有函数里 `set_config('app.membership_write','on')` 的事务能写 |
+
+### 客户端接口
+
+```ts
+const { profile, checkIn, applyInvite, redeemCode } = useCloud()
+profile.level        // 等级（数据库算）
+profile.growth       // 成长值
+profile.daysLeft     // 会员剩余天数
+profile.streak       // 连续签到
+profile.checkedInToday
+profile.inviteCode
+
+await checkIn()                 // → { ok, gained, streak }
+await applyInvite('ABCD1234')   // → { ok, inviter, points }
+await redeemCode('YS-SVIP-…')   // → 新的到期时间
+```
+
+`refreshProfile()` 会先调 `membership_snapshot()` 取整包快照；函数不存在或扩展列没加时自动降级读表，界面不会白。
+
+### 视频卡点
+
+- 数据层：`video_sources` 的 SELECT / INSERT 策略都要求 `public.is_svip(auth.uid())`
+- UI 层：`src/app/(tabs)/video/index.tsx` 在 `isCloudConfigured && !isSvip` 时显示「视频是 SVIP 专属」页，按钮跳账号页
+- 没配 Supabase 时（本地模式）不拦，本地导入的视频源照常能放
+
+### 发卡密
+
+```sql
+insert into public.redeem_codes (code, days) values ('YS-SVIP-2027-AAAA', 365);
+insert into public.redeem_codes (code, days) values ('YS-SVIP-30-BBBB', 30);
+```
+
+兑换成功后：`plan = svip`、到期日顺延、成长值 +天数，卡面成长条会实时变长。
+
+### 失败码
+
+| 返回 | 含义 |
+|---|---|
+| `ALREADY` | 今天已签到 |
+| `ALREADY_INVITED` | 这个账号已经绑定过邀请人 |
+| `CODE_NOT_FOUND` | 邀请码不存在 |
+| `SELF` | 填了自己的邀请码 |
+| `CODE_INVALID` | 卡密无效或已用 |
+| `NOT_AUTHENTICATED` | 没登录 |

@@ -11,4 +11,13 @@ export {
 	type CloudDevice,
 } from './device'
 export { pullOnly, syncNow, type SyncResult } from './sync'
-export { formatSvipExpire, isSvipProfile, svipDaysLeft, useIsSvip } from './svip'
+export {
+	GROWTH_PER_LEVEL,
+	MAX_LEVEL,
+	formatSvipExpire,
+	growthProgress,
+	isSvipProfile,
+	levelOfGrowth,
+	svipDaysLeft,
+	useIsSvip,
+} from './svip'

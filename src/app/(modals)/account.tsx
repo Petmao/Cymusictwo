@@ -202,6 +202,35 @@ const AccountScreen = () => {
 									? `有效期至 ${formatSvipExpire(profile)} · 剩 ${svipDaysLeft(profile)} 天`
 									: '未开通 · 视频功能需要 SVIP'}
 							</Text>
+							{profile ? (
+								<View style={styles.memberStats}>
+									<View style={styles.memberCell}>
+										<Text style={styles.memberValue}>Lv.{profile.level}</Text>
+										<Text style={styles.memberLabel}>等级</Text>
+									</View>
+									<View style={styles.memberCell}>
+										<Text style={styles.memberValue}>{profile.growth}</Text>
+										<Text style={styles.memberLabel}>成长值</Text>
+									</View>
+									<View style={styles.memberCell}>
+										<Text style={styles.memberValue}>
+											{profile.checkedInToday ? '已签' : '未签'}
+										</Text>
+										<Text style={styles.memberLabel}>今日</Text>
+									</View>
+									<View style={styles.memberCell}>
+										<Text style={styles.memberValue}>{profile.streak}</Text>
+										<Text style={styles.memberLabel}>连续签到</Text>
+									</View>
+								</View>
+							) : null}
+
+							{profile?.inviteCode ? (
+								<Text style={[styles.svipLine, { marginTop: 8 }]}>
+									邀请码 {profile.inviteCode} · 好友填码双方各得积分
+								</Text>
+							) : null}
+
 							<View style={styles.redeemRow}>
 								<TextInput
 									value={code}
@@ -344,6 +373,16 @@ const createStyles = (colors: ThemeColors) =>
 		svipTitle: { color: '#F2CC84', fontSize: 16, fontWeight: '700' },
 		svipLine: { color: colors.textMuted, fontSize: 12.5, marginTop: 6 },
 		redeemRow: { flexDirection: 'row', gap: 8, marginTop: spacing.md, alignItems: 'center' },
+		memberStats: {
+			flexDirection: 'row',
+			marginTop: spacing.md,
+			paddingTop: spacing.sm + 2,
+			borderTopWidth: StyleSheet.hairlineWidth,
+			borderTopColor: colors.separator,
+		},
+		memberCell: { flex: 1, alignItems: 'center' },
+		memberValue: { fontSize: 15, fontWeight: '700', color: colors.text, fontVariant: ['tabular-nums'] },
+		memberLabel: { marginTop: 3, fontSize: 10, color: colors.textMuted },
 		smallButton: {
 			height: 44,
 			paddingHorizontal: spacing.lg,
