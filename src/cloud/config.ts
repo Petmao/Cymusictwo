@@ -14,6 +14,13 @@ const KEY_KEY = 'cloud.anonKey'
 
 export const DEFAULT_CLOUD_URL = 'https://ys.irepo.cn'
 
+/**
+ * 默认 anon key（公开密钥，配 RLS 使用；service_role 绝不进包）。
+ * 它由服务器上的 JWT_SECRET 签出，换密钥时改这一行或走 App 内「服务器设置」。
+ */
+export const DEFAULT_CLOUD_ANON_KEY =
+	'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl1c2hlbmciLCJyb2xlIjoiYW5vbiIsImlhdCI6MTc5NDkzMDExNCwiZXhwIjoyMTEwMjkwMTE0fQ.v5Y5gDyF1atSi02wyM42_syg4LlVmaR5EuVxbujLDFY'
+
 const read = (key: string): string => {
 	try {
 		return getOrCreateMMKV(STORE_ID).getString(key) ?? ''
@@ -49,7 +56,7 @@ export const getCloudConfig = (): CloudConfig => {
 	const envKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? ''
 
 	const url = normalizeUrl(storedUrl || envUrl || DEFAULT_CLOUD_URL)
-	const anonKey = (storedKey || envKey || '').trim()
+	const anonKey = (storedKey || envKey || DEFAULT_CLOUD_ANON_KEY).trim()
 	const source: CloudConfig['source'] = storedUrl || storedKey ? 'local' : envKey ? 'build' : 'default'
 
 	return {
