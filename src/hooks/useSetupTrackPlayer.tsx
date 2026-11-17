@@ -1,9 +1,12 @@
 import myTrackPlayer from '@/helpers/trackPlayerIndex'
+import { breadcrumb } from '@/helpers/crashLog'
 import { useEffect, useRef } from 'react'
 import TrackPlayer, { Capability, RatingType, RepeatMode } from 'react-native-track-player'
 
 const setupPlayer = async () => {
+	breadcrumb('player:setup-start')
 	await TrackPlayer.setupPlayer({})
+	breadcrumb('player:setup-callback')
 
 	await TrackPlayer.updateOptions({
 		ratingType: RatingType.Heart,
@@ -20,6 +23,7 @@ const setupPlayer = async () => {
 
 	await TrackPlayer.setVolume(1) // 默认音量1
 	await TrackPlayer.setRepeatMode(RepeatMode.Queue)
+	breadcrumb('player:setup-ok')
 }
 
 export const useSetupTrackPlayer = ({ onLoad }: { onLoad?: () => void }) => {
@@ -34,7 +38,9 @@ export const useSetupTrackPlayer = ({ onLoad }: { onLoad?: () => void }) => {
 			.then(async () => {
 				isInitialized.current = true
 				try {
+					breadcrumb('player:restore-start')
 					await myTrackPlayer.setupTrackPlayer()
+					breadcrumb('player:restore-ok')
 				} catch (error) {
 					// 恢复队列/音源失败不应该卡住启动页
 					console.error('setupTrackPlayer 恢复失败:', error)

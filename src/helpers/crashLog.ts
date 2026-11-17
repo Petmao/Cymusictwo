@@ -1,11 +1,14 @@
 import getOrCreateMMKV from '@/store/getOrCreateMMKV'
 
 /**
- * 启动期致命错误的落盘记录。
+ * 启动期诊断记录。
  *
- * JS 线程在渲染前抛错时，release 包会直接 abort，用户只看到「点图标就退」。
- * 这里把最后几条错误同步写进 MMKV，下次启动可以在「设置 → 应用日志」里看到，
- * 不至于只能靠猜。
+ * 两个去处：
+ * 1. MMKV —— App 能起来时，「设置 → 应用日志」直接看；
+ * 2. Documents/boot.log —— App 直接崩掉时，用系统「文件」App
+ *    （我的 iPhone → 屿声音乐）也能把原文导出来。
+ *
+ * 所有写入都是尽力而为，自身绝不能再抛错。
  */
 const STORE_ID = 'crashLog'
 const KEY = 'fatal.entries'
@@ -40,7 +43,65 @@ const serialize = (error: unknown): { message: string; stack?: string } => {
 	}
 }
 
-/** 记录一条致命错误。自身绝不能再抛错，否则就死循环了。 */
+// ---------- 文件镜像 ----------
+
+let fileLines: string[] = []
+let fileSeq = 0
+
+/**
+ * expo-file-system 用懒加载拿。
+ * 万一原生模块没链上，这里返回 null，只是没有文件镜像，
+ * 不能因为诊断工具自身把启动带崩。
+ */
+let fsModule: any = undefined
+const fs = (): any => {
+	if (fsModule !== undefined) return fsModule
+	try {
+		// eslint-disable-next-line @typescript-eslint/no-var-requires
+		fsModule = require('expo-file-system')
+	} catch {
+		fsModule = null
+	}
+	return fsModule
+}
+
+const fileTarget = (): string | null => {
+	try {
+		const dir = fs()?.documentDirectory
+		return dir ? `${dir}boot.log` : null
+	} catch {
+		return null
+	}
+}
+
+const flushFile = (extra?: string) => {
+	try {
+		const target = fileTarget()
+		if (!target) return
+		const api = fs()
+		if (!api?.writeAsStringAsync) return
+		if (extra) fileLines.push(extra)
+		if (fileLines.length > 400) fileLines = fileLines.slice(-400)
+		const body = fileLines.join('\n')
+		// 不 await：崩在下一行也要尽量把内容交给原生
+		void api.writeAsStringAsync(target, body).catch(() => undefined)
+	} catch {
+		// ignore
+	}
+}
+
+/** 启动轨迹：记录走到了哪一步，崩溃后能看出死在哪 */
+export const breadcrumb = (stage: string) => {
+	try {
+		// 每次冷启动从 entry 开始写，先清掉上一轮的内容
+		if (stage === 'entry') fileLines = []
+		fileSeq += 1
+		flushFile(`${new Date().toISOString()} #${fileSeq} ${stage}`)
+	} catch {
+		// ignore
+	}
+}
+
 export const recordFatal = (error: unknown, where = 'boot') => {
 	try {
 		const { message, stack } = serialize(error)
@@ -52,8 +113,9 @@ export const recordFatal = (error: unknown, where = 'boot') => {
 		}
 		const next = [...readAll(), entry].slice(-LIMIT)
 		getOrCreateMMKV(STORE_ID).set(KEY, JSON.stringify(next))
+		flushFile(`!! FATAL [${where}] ${entry.message}\n${entry.stack ?? ''}`)
 	} catch {
-		// 落盘失败就只能放弃
+		// ignore
 	}
 }
 
@@ -65,9 +127,16 @@ export const clearFatalLog = () => {
 	} catch {
 		// ignore
 	}
+	try {
+		const target = fileTarget()
+		const api = fs()
+		if (target && api?.deleteAsync) void api.deleteAsync(target, { idempotent: true }).catch(() => undefined)
+	} catch {
+		// ignore
+	}
 }
 
-/** 装一个全局兜底：先落盘，再交回 RN 原来的处理器 */
+/** 装全局兜底：先落盘，再交回 RN 原处理器 */
 export const installFatalHandler = () => {
 	const g = global as any
 	const utils = g.ErrorUtils

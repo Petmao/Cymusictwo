@@ -1,5 +1,6 @@
 import { internalFakeSoundKey, sortIndexSymbol, timeStampSymbol } from '@/constants/commonConst'
 import { SoundAsset } from '@/constants/constant'
+import { recordFatal } from '@/helpers/crashLog'
 import Config from '@/store/config'
 import delay from '@/utils/delay'
 import { isSameMediaItem, mergeProps, sortByTimestampAndIndex } from '@/utils/mediaItem'
@@ -192,26 +193,31 @@ async function setupTrackPlayer() {
 
 		ReactNativeTrackPlayer.addEventListener(Event.PlaybackError, async (e) => {
 			// WARNING: 不稳定，报错的时候有可能track已经变到下一首歌去了
-			const currentTrack = await ReactNativeTrackPlayer.getActiveTrack()
-			if (currentTrack?.isInit) {
-				// HACK: 避免初始失败的情况
+			try {
+				const currentTrack = await ReactNativeTrackPlayer.getActiveTrack()
+				if (currentTrack?.isInit) {
+					// HACK: 避免初始失败的情况
 
-				await ReactNativeTrackPlayer.updateMetadataForTrack(0, {
-					...currentTrack,
-					// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-					// @ts-expect-error
-					isInit: undefined,
-				})
-				return
-			}
+					await ReactNativeTrackPlayer.updateMetadataForTrack(0, {
+						...currentTrack,
+						// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+						// @ts-expect-error
+						isInit: undefined,
+					})
+					return
+				}
 
-			if ((await ReactNativeTrackPlayer.getActiveTrackIndex()) === 0 && e.message) {
-				logInfo('播放出错', {
-					message: e.message,
-					code: e.code,
-				})
+				if ((await ReactNativeTrackPlayer.getActiveTrackIndex()) === 0 && e.message) {
+					logInfo('播放出错', {
+						message: e.message,
+						code: e.code,
+					})
 
-				await failToPlay()
+					await failToPlay()
+				}
+			} catch (error) {
+				// 播放错误处理本身不该再把 App 带走
+				recordFatal(error, 'playback-error-handler')
 			}
 		})
 

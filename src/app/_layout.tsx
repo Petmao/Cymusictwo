@@ -2,7 +2,7 @@ import { useCloud } from '@/cloud'
 import { playbackService } from '@/constants/playbackService'
 import { AppThemeProvider, useAppTheme } from '@/hooks/useAppTheme'
 import LyricManager from '@/helpers/lyricManager'
-import { installFatalHandler, recordFatal } from '@/helpers/crashLog'
+import { breadcrumb, recordFatal } from '@/helpers/crashLog'
 import { useLogTrackPlayerState } from '@/hooks/useLogTrackPlayerState'
 import { useSetupTrackPlayer } from '@/hooks/useSetupTrackPlayer'
 import i18n, { setI18nConfig } from '@/utils/i18n'
@@ -16,16 +16,33 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message'
 import TrackPlayer from 'react-native-track-player'
 
-// 尽量早地挂上兜底：JS 线程的致命错误先落盘再交给 RN 原处理器
-installFatalHandler()
+// 模块求值阶段的每一处副作用都单独兜住，崩了也要留下 breadcrumb
+breadcrumb('layout:imports-done')
 
-SplashScreen.preventAutoHideAsync()
+try {
+	SplashScreen.preventAutoHideAsync()
+	breadcrumb('layout:splash-guard')
+} catch (error) {
+	recordFatal(error, 'splash-prevent')
+}
 
-TrackPlayer.registerPlaybackService(() => playbackService)
-setI18nConfig()
+try {
+	TrackPlayer.registerPlaybackService(() => playbackService)
+	breadcrumb('layout:playback-service')
+} catch (error) {
+	recordFatal(error, 'register-playback-service')
+}
+
+try {
+	setI18nConfig()
+	breadcrumb('layout:i18n')
+} catch (error) {
+	recordFatal(error, 'i18n-setup')
+}
 const App = () => {
 	const handleTrackPlayerLoaded = useCallback(() => {
 		setTimeout(SplashScreen.hideAsync, 1500)
+		breadcrumb('player:loaded')
 	}, [])
 
 	useSetupTrackPlayer({
@@ -50,17 +67,12 @@ const App = () => {
 		return () => clearTimeout(fallback)
 	}, [])
 
-	LyricManager.setup()
-	const { hasShareIntent } = useShareIntentContext()
-
-	useEffect(() => {
-		if (hasShareIntent) {
-			// we want to handle share intent event in a specific page
-			console.log('[expo-router-index111] redirect to ShareIntent screen')
-			console.log('[expo-router-index111] hasShareIntent', hasShareIntent)
-			router.replace('/(modals)/cymusic')
-		}
-	}, [hasShareIntent])
+	try {
+		LyricManager.setup()
+	} catch (error) {
+		recordFatal(error, 'lyric-setup')
+	}
+	breadcrumb('app:render')
 	useEffect(() => {
 		const initI18n = async () => {
 			try {
@@ -86,14 +98,14 @@ const App = () => {
 			}}
 		>
 			<AppThemeProvider>
+				<ShareIntentWatcher />
 				<ThemedAppShell />
 			</AppThemeProvider>
 		</ShareIntentProvider>
 	)
 }
 
-const ThemedAppShell = () => {
-	const { colors, statusBarStyle } = useAppTheme()
+const ThemedAppShell = () => {	const { colors, statusBarStyle } = useAppTheme()
 
 	const toastConfig = useMemo(
 		() => ({
@@ -274,6 +286,24 @@ const RootNavigation = () => {
 			/>
 		</Stack>
 	)
+}
+
+/**
+ * 分享意图监听。
+ *
+ * 必须放在 ShareIntentProvider 内部——之前写在 App 里，
+ * 而 Provider 又由 App 渲染，hook 永远拿不到上层 context。
+ */
+const ShareIntentWatcher = () => {
+	const { hasShareIntent } = useShareIntentContext()
+
+	useEffect(() => {
+		if (hasShareIntent) {
+			router.replace('/(modals)/cymusic')
+		}
+	}, [hasShareIntent])
+
+	return null
 }
 
 export default App
