@@ -1,4 +1,6 @@
 // src/app/modals/settingModal.tsx
+import { useCloud } from '@/cloud'
+import { GradientScreen } from '@/components/GradientScreen'
 import { ThemeColors, radius, spacing, strokeWidth, typography } from '@/constants/tokens'
 import { logError, logInfo } from '@/helpers/logger'
 import myTrackPlayer, {
@@ -27,6 +29,7 @@ import {
 	Alert,
 	Image,
 	Linking,
+	Pressable,
 	ScrollView,
 	StyleSheet,
 	Switch,
@@ -420,6 +423,7 @@ const SettingModal = () => {
 	const { themeMode, setThemeMode } = useThemeMode()
 	const styles = useMemo(() => createStyles(colors), [colors])
 	const router = useRouter()
+	const signOut = useCloud((state) => state.signOut)
 	const [currentQuality, setCurrentQuality] = useCurrentQuality()
 	const [isLoading, setIsLoading] = useState(false)
 	const apiState = nowApiState.useValue()
@@ -850,20 +854,33 @@ const SettingModal = () => {
 	*/
 	}
 	return (
-		<View style={styles.container}>
-			<DismissPlayerSymbol />
-			<Text style={styles.header}>{i18n.t('settings.title')}</Text>
-			<ScrollView style={styles.scrollView}>
-				{settingsData.map((section, index) => (
-					<View key={index} style={styles.section}>
-						<Text style={styles.sectionTitle}>{section.title}</Text>
-						<View style={styles.sectionContent}>{section.data.map(renderItem)}</View>
-					</View>
-				))}
-			</ScrollView>
-			{isLoading && <GlobalLoading />}
-			<Toast config={toastConfig} />
-		</View>
+		<GradientScreen>
+			<View style={styles.container}>
+				<DismissPlayerSymbol />
+				<Text style={styles.header}>{i18n.t('settings.title')}</Text>
+				<ScrollView style={styles.scrollView}>
+					{settingsData.map((section, index) => (
+						<View key={index} style={styles.section}>
+							<Text style={styles.sectionTitle}>{section.title}</Text>
+							<View style={styles.sectionContent}>{section.data.map(renderItem)}</View>
+						</View>
+					))}
+
+					<Pressable
+						onPress={async () => {
+							await signOut().catch(() => undefined)
+							showToast('已退出登录')
+							router.back()
+						}}
+						style={({ pressed }) => [styles.logoutCard, pressed && { opacity: 0.7 }]}
+					>
+						<Text style={styles.logoutText}>退出登录</Text>
+					</Pressable>
+				</ScrollView>
+				{isLoading && <GlobalLoading />}
+				<Toast config={toastConfig} />
+			</View>
+		</GradientScreen>
 	)
 }
 
@@ -871,7 +888,25 @@ const createStyles = (colors: ThemeColors) =>
 	StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: colors.background,
+		backgroundColor: 'transparent',
+	},
+	logoutCard: {
+		marginHorizontal: spacing.lg,
+		marginTop: spacing.md,
+		marginBottom: spacing.xxl + 8,
+		height: 52,
+		borderRadius: 18,
+		borderCurve: 'continuous',
+		borderWidth: 1.5,
+		borderColor: 'rgba(242,103,140,0.50)',
+		backgroundColor: 'rgba(242,103,140,0.07)',
+		alignItems: 'center',
+		justifyContent: 'center',
+	},
+	logoutText: {
+		fontSize: 15,
+		fontWeight: '600',
+		color: '#F2678C',
 	},
 	dismissSymbol: {
 		position: 'absolute',

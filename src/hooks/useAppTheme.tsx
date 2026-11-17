@@ -2,10 +2,12 @@ import PersistStatus from '@/store/PersistStatus'
 import { GlobalState } from '@/utils/stateMapper'
 import {
 	ThemeColors,
+	ThemeGradients,
 	ThemeMode,
 	ResolvedTheme,
 	getRuntimeColors,
 	getThemeColors,
+	getThemeGradients,
 	setRuntimeColors,
 } from '@/constants/tokens'
 import React, { ReactNode, createContext, useContext, useEffect, useMemo } from 'react'
@@ -15,6 +17,7 @@ type AppThemeContextValue = {
 	themeMode: ThemeMode
 	resolvedTheme: ResolvedTheme
 	colors: ThemeColors
+	gradients: ThemeGradients
 	isDark: boolean
 	blurTint: ThemeColors['blurTint']
 	statusBarStyle: 'light' | 'dark'
@@ -38,6 +41,7 @@ const createThemeValue = (
 		themeMode,
 		resolvedTheme,
 		colors,
+		gradients: getThemeGradients(resolvedTheme),
 		isDark: resolvedTheme === 'dark',
 		blurTint: colors.blurTint,
 		statusBarStyle: resolvedTheme === 'dark' ? 'light' : 'dark',

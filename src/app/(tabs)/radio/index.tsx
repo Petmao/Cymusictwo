@@ -1,3 +1,4 @@
+import { GradientScreen } from '@/components/GradientScreen'
 import { RadioList } from '@/components/RadioList'
 import { screenPadding } from '@/constants/tokens'
 import { playlistNameFilter } from '@/helpers/filter'
@@ -31,7 +32,7 @@ const RadiolistsScreen = () => {
 	}
 
 	return (
-		<View style={defaultStyles.container}>
+		<GradientScreen>
 			<ScrollView
 				contentInsetAdjustmentBehavior="automatic"
 				style={{
@@ -44,7 +45,7 @@ const RadiolistsScreen = () => {
 					onPlaylistPress={handlePlaylistPress}
 				/>
 			</ScrollView>
-		</View>
+		</GradientScreen>
 	)
 }
 

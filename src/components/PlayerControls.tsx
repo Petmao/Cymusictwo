@@ -1,6 +1,7 @@
-import { useThemeColors } from '@/hooks/useAppTheme'
+import { useAppTheme, useThemeColors } from '@/hooks/useAppTheme'
 import myTrackPlayer, { trackSkipLoadingStore } from '@/helpers/trackPlayerIndex'
 import { FontAwesome6 } from '@expo/vector-icons'
+import { LinearGradient } from 'expo-linear-gradient'
 import React from 'react'
 import { ActivityIndicator, StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native'
 import TrackPlayer, { useIsPlaying } from 'react-native-track-player'
@@ -30,6 +31,44 @@ export const PlayerControls = React.memo(({ style }: PlayerControlsProps) => {
 export const PlayPauseButton = React.memo(({ style, iconSize = 48 }: PlayerButtonProps) => {
 	const { playing } = useIsPlaying()
 	const colors = useThemeColors()
+	const { gradients } = useAppTheme()
+	// 播放页那颗主按钮走渐变圆，迷你条上的小键保持无底
+	const isHero = iconSize >= 40
+	const boxSize = Math.round(iconSize * 1.62)
+
+	if (isHero) {
+		return (
+			<View style={style}>
+				<TouchableOpacity
+					activeOpacity={0.85}
+					onPress={playing ? TrackPlayer.pause : TrackPlayer.play}
+				>
+					<LinearGradient
+						colors={gradients.accent}
+						start={{ x: 0.1, y: 0 }}
+						end={{ x: 0.9, y: 1 }}
+						style={{
+							width: boxSize,
+							height: boxSize,
+							borderRadius: boxSize / 2,
+							alignItems: 'center',
+							justifyContent: 'center',
+							shadowColor: gradients.accent[1],
+							shadowOpacity: 0.55,
+							shadowRadius: 18,
+							shadowOffset: { width: 0, height: 8 },
+						}}
+					>
+						<FontAwesome6
+							name={playing ? 'pause' : 'play'}
+							size={Math.round(iconSize * 0.62)}
+							color="#FFFFFF"
+						/>
+					</LinearGradient>
+				</TouchableOpacity>
+			</View>
+		)
+	}
 
 	return (
 		<View style={[{ height: iconSize }, style]}>

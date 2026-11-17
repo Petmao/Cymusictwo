@@ -227,7 +227,8 @@ const SearchlistsScreen = () => {
 	}
 
 	return (
-		<SafeAreaView style={styles.safeArea}>
+		<GradientScreen>
+			<SafeAreaView style={styles.safeArea}>
 			<Animated.View
 				style={[
 					styles.contentContainer,
@@ -326,7 +327,8 @@ const SearchlistsScreen = () => {
 					</View>
 				)}
 			</Animated.View>
-		</SafeAreaView>
+			</SafeAreaView>
+		</GradientScreen>
 	)
 }
 
@@ -338,11 +340,11 @@ const createStyles = (colors: ThemeColors) =>
 	},
 	safeArea: {
 		flex: 1,
-		backgroundColor: colors.background,
+		backgroundColor: 'transparent',
 	},
 	contentContainer: {
 		flex: 1,
-		backgroundColor: colors.background,
+		backgroundColor: 'transparent',
 		paddingTop: 8,
 	},
 	segmentedControlContainer: {

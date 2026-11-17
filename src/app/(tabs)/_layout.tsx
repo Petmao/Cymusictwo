@@ -4,9 +4,10 @@ import { useAppTheme } from '@/hooks/useAppTheme'
 import i18n from '@/utils/i18n'
 import { Ionicons } from '@expo/vector-icons'
 import { BlurView } from 'expo-blur'
+import { LinearGradient } from 'expo-linear-gradient'
 import { Tabs } from 'expo-router'
 import React, { useMemo } from 'react'
-import { StyleSheet } from 'react-native'
+import { StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 export const unstable_settings = {
@@ -16,20 +17,21 @@ export const unstable_settings = {
 const TAB_BAR_HEIGHT = 54
 const TAB_BAR_MARGIN = 12
 
-const TabBarBackground = ({ tint }: { tint: BlurTint }) => (
-	<BlurView
-		intensity={92}
-		tint={tint}
-		style={[
-			StyleSheet.absoluteFill,
-			{
-				overflow: 'hidden',
-				borderRadius: radius.xl,
-				borderCurve: 'continuous',
-			},
-		]}
-	/>
-)
+const TabBarBackground = ({ tint }: { tint: BlurTint }) => {
+	const { gradients } = useAppTheme()
+
+	return (
+		<View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
+			<BlurView intensity={92} tint={tint} style={StyleSheet.absoluteFill} />
+			<LinearGradient
+				colors={gradients.glassTab}
+				start={{ x: 0.1, y: 0 }}
+				end={{ x: 0.9, y: 1 }}
+				style={StyleSheet.absoluteFill}
+			/>
+		</View>
+	)
+}
 
 const TabsNavigation = () => {
 	const { bottom } = useSafeAreaInsets()
@@ -105,14 +107,20 @@ const TabsNavigation = () => {
 					}}
 				/>
 				<Tabs.Screen
-					name="favorites"
+					name="video"
 					options={{
-						title: i18n.t('appTab.favorites'),
+						title: i18n.t('appTab.video'),
 						tabBarIcon: ({ color, focused }) => (
-							<Ionicons name={focused ? 'heart' : 'heart-outline'} size={23} color={color} />
+							<Ionicons
+								name={focused ? 'play-circle' : 'play-circle-outline'}
+								size={23}
+								color={color}
+							/>
 						),
 					}}
 				/>
+				{/* 收藏并入「我的」，路由保留但不在底栏出现 */}
+				<Tabs.Screen name="favorites" options={{ href: null }} />
 				<Tabs.Screen
 					name="mine"
 					options={{

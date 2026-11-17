@@ -34,62 +34,126 @@ export type ThemeColors = {
 }
 
 export const lightColors: ThemeColors = {
-	primary: '#fc3c44',
-	background: '#ffffff',
-	surface: '#f5f5f7',
-	surfaceElevated: '#ffffff',
-	surfaceMuted: '#eef1f5',
-	card: '#ffffff',
-	text: '#111827',
-	textMuted: '#6b7280',
-	icon: '#111827',
-	border: 'rgba(17,24,39,0.12)',
-	separator: 'rgba(17,24,39,0.08)',
-	placeholder: '#9ca3af',
-	maximumTrackTintColor: 'rgba(17,24,39,0.12)',
-	minimumTrackTintColor: 'rgba(17,24,39,0.55)',
-	loading: 'rgba(17,24,39,0.45)',
-	overlay: 'rgba(0,0,0,0.45)',
+	primary: '#D94468',
+	background: '#F8EEE6',
+	surface: '#FFFFFF',
+	surfaceElevated: '#FFFFFF',
+	surfaceMuted: '#F2E7DE',
+	card: '#FFFFFF',
+	text: '#221B1E',
+	textMuted: '#6E6469',
+	icon: '#221B1E',
+	border: 'rgba(52,28,46,0.10)',
+	separator: 'rgba(52,28,46,0.07)',
+	placeholder: '#A2939A',
+	maximumTrackTintColor: 'rgba(52,28,46,0.12)',
+	minimumTrackTintColor: 'rgba(52,28,46,0.55)',
+	loading: 'rgba(52,28,46,0.45)',
+	overlay: 'rgba(20,10,18,0.42)',
 	overlayStrong: 'rgba(255,255,255,0.92)',
-	overlaySoft: 'rgba(17,24,39,0.08)',
-	shadow: '#000000',
-	dismissBar: 'rgba(17,24,39,0.35)',
-	artworkPlaceholder: '#d1d5db',
-	toastBackground: 'rgb(251,231,227)',
-	toastAccent: 'rgb(252,87,59)',
-	success: '#34c759',
-	error: '#ff3b30',
+	overlaySoft: 'rgba(52,28,46,0.08)',
+	shadow: '#341C40',
+	dismissBar: 'rgba(52,28,46,0.32)',
+	artworkPlaceholder: '#E7D8CD',
+	toastBackground: 'rgb(255,238,232)',
+	toastAccent: 'rgb(217,68,104)',
+	success: '#3F9E7C',
+	error: '#D94468',
 	blurTint: 'light',
 }
 
 export const darkColors: ThemeColors = {
-	primary: '#fc3c44',
-	background: '#000000',
-	surface: '#121212',
-	surfaceElevated: 'rgb(32,32,32)',
-	surfaceMuted: '#1c1c1f',
-	card: '#202020',
-	text: '#ffffff',
-	textMuted: '#9ca3af',
-	icon: '#ffffff',
-	border: 'rgba(255,255,255,0.12)',
-	separator: 'rgba(255,255,255,0.12)',
-	placeholder: '#999999',
-	maximumTrackTintColor: 'rgba(255,255,255,0.4)',
-	minimumTrackTintColor: 'rgba(255,255,255,0.6)',
-	loading: 'rgba(255,255,255,0.6)',
-	overlay: 'rgba(0,0,0,0.5)',
-	overlayStrong: 'rgba(0,0,0,0.82)',
-	overlaySoft: 'rgba(255,255,255,0.1)',
+	primary: '#F0688F',
+	background: '#07060C',
+	surface: '#12101A',
+	surfaceElevated: '#16131F',
+	surfaceMuted: '#1B1725',
+	card: '#16131F',
+	text: '#F6F3F1',
+	textMuted: '#9E9BA5',
+	icon: '#F6F3F1',
+	border: 'rgba(255,255,255,0.10)',
+	separator: 'rgba(255,255,255,0.07)',
+	placeholder: '#6B6874',
+	maximumTrackTintColor: 'rgba(255,255,255,0.16)',
+	minimumTrackTintColor: 'rgba(255,255,255,0.62)',
+	loading: 'rgba(255,255,255,0.55)',
+	overlay: 'rgba(4,3,8,0.62)',
+	overlayStrong: 'rgba(4,3,8,0.86)',
+	overlaySoft: 'rgba(255,255,255,0.10)',
 	shadow: '#000000',
-	dismissBar: 'rgba(255,255,255,0.7)',
-	artworkPlaceholder: '#808080',
-	toastBackground: 'rgb(251,231,227)',
-	toastAccent: 'rgb(252,87,59)',
-	success: '#34c759',
-	error: '#ff3b30',
+	dismissBar: 'rgba(255,255,255,0.62)',
+	artworkPlaceholder: '#241C2E',
+	toastBackground: 'rgba(32,24,40,0.96)',
+	toastAccent: '#F0688F',
+	success: '#6BCFA8',
+	error: '#FF7A8F',
 	blurTint: 'dark',
 }
+
+export type ThemeGradients = {
+	/** 页面底色（四段纵向） */
+	screen: [string, string, string, string]
+	/** 页面底色的落点 */
+	screenStops: [number, number, number, number]
+	/** 主色渐变：按钮、进度条、开关 */
+	accent: [string, string, string]
+	/** 玻璃卡前景渐变（压在 BlurView 之上） */
+	glass: [string, string]
+	/** 导航条 / 迷你条玻璃 */
+	glassTab: [string, string]
+	/** 会员卡金边 */
+	gold: [string, string, string, string]
+	/** 会员卡内层深金底 */
+	goldInner: [string, string, string]
+	/** 成长值进度条 */
+	goldBar: [string, string, string]
+	/** 玫瑰实心胶囊 */
+	rose: [string, string, string]
+	/** 浅玫瑰胶囊 */
+	roseLight: [string, string, string]
+	/** 紫玫瑰胶囊 */
+	violet: [string, string, string]
+	/** 渐变字：粉 → 淡紫 */
+	textGlow: [string, string]
+	/** 空态光晕 */
+	glow: string
+}
+
+export const darkGradients: ThemeGradients = {
+	screen: ['#07060C', '#100B1B', '#0B0813', '#07060C'],
+	screenStops: [0, 0.42, 0.74, 1],
+	accent: ['#FF7A59', '#E0455E', '#A855F7'],
+	glass: ['rgba(255,255,255,0.085)', 'rgba(255,255,255,0.028)'],
+	glassTab: ['rgba(255,255,255,0.14)', 'rgba(255,255,255,0.05)'],
+	gold: ['#F9E2AC', '#D8A94E', '#8E6A22', '#FBEBC0'],
+	goldInner: ['#2C2112', '#1B1409', '#241A0C'],
+	goldBar: ['#C9962F', '#F2CC84', '#FFE7B8'],
+	rose: ['#E8577C', '#D33F63', 'rgba(211,63,99,0.55)'],
+	roseLight: ['#F3A7BD', '#DE7C99', 'rgba(222,124,153,0.80)'],
+	violet: ['#8B5CF6', '#C2457F', 'rgba(194,69,127,0.75)'],
+	textGlow: ['#FFA9C4', '#B9A2FF'],
+	glow: 'rgba(240,106,150,0.34)',
+}
+
+export const lightGradients: ThemeGradients = {
+	screen: ['#FCE7D8', '#F6E4EF', '#E4EFEA', '#EDE7F8'],
+	screenStops: [0, 0.36, 0.7, 1],
+	accent: ['#FF8A63', '#D94F6A', '#7C6BF0'],
+	glass: ['rgba(255,255,255,0.96)', 'rgba(255,255,255,0.86)'],
+	glassTab: ['rgba(255,255,255,0.94)', 'rgba(255,255,255,0.72)'],
+	gold: ['#C79A3A', '#E8C276', '#A87B22', '#F7E3B0'],
+	goldInner: ['#FBF1DA', '#F3E2B8', '#EBD5A2'],
+	goldBar: ['#B8862A', '#DDB662', '#F3D79B'],
+	rose: ['#D94468', '#BE3253', 'rgba(190,50,83,0.62)'],
+	roseLight: ['#E889A0', '#D2657F', 'rgba(210,101,127,0.82)'],
+	violet: ['#7A4FE0', '#B23A72', 'rgba(178,58,114,0.78)'],
+	textGlow: ['#E8678F', '#7C6BF0'],
+	glow: 'rgba(240,106,150,0.26)',
+}
+
+export const getThemeGradients = (theme: ResolvedTheme): ThemeGradients =>
+	theme === 'light' ? lightGradients : darkGradients
 
 export const getThemeColors = (theme: ResolvedTheme): ThemeColors =>
 	theme === 'light' ? lightColors : darkColors

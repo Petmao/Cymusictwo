@@ -231,6 +231,25 @@ const RootNavigation = () => {
 				}}
 			/>
 			<Stack.Screen
+				name="(modals)/videosources"
+				options={{
+					presentation: 'modal',
+					headerShown: false,
+					gestureEnabled: true,
+					gestureDirection: 'vertical',
+				}}
+			/>
+			<Stack.Screen
+				name="(modals)/videoPlayer"
+				options={{
+					presentation: 'fullScreenModal',
+					headerShown: false,
+					gestureEnabled: false,
+					animation: 'fade',
+					contentStyle: { backgroundColor: '#000000' },
+				}}
+			/>
+			<Stack.Screen
 				name="(modals)/logScreen"
 				options={{
 					presentation: 'modal',
