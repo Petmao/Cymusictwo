@@ -1,3 +1,4 @@
+import { useCloud } from '@/cloud'
 import { playbackService } from '@/constants/playbackService'
 import { AppThemeProvider, useAppTheme } from '@/hooks/useAppTheme'
 import LyricManager from '@/helpers/lyricManager'
@@ -26,6 +27,12 @@ const App = () => {
 	})
 
 	useLogTrackPlayerState()
+
+	// 云端会话恢复：没配置 Supabase 时内部直接返回，不会阻塞启动
+	const bootstrapCloud = useCloud((state) => state.bootstrap)
+	useEffect(() => {
+		void bootstrapCloud()
+	}, [bootstrapCloud])
 	// myTrackPlayer.setupTrackPlayer()
 
 	// 兜底：播放器初始化任何环节抛错都不该把启动页永久卡住
@@ -198,6 +205,24 @@ const RootNavigation = () => {
 			/>
 			<Stack.Screen
 				name="(modals)/[name]"
+				options={{
+					presentation: 'modal',
+					headerShown: false,
+					gestureEnabled: true,
+					gestureDirection: 'vertical',
+				}}
+			/>
+			<Stack.Screen
+				name="(modals)/account"
+				options={{
+					presentation: 'modal',
+					headerShown: false,
+					gestureEnabled: true,
+					gestureDirection: 'vertical',
+				}}
+			/>
+			<Stack.Screen
+				name="(modals)/devices"
 				options={{
 					presentation: 'modal',
 					headerShown: false,

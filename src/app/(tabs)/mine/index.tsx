@@ -1,3 +1,4 @@
+import { formatSvipExpire, isSvipProfile, useCloud } from '@/cloud'
 import { pickRandomQuote } from '@/constants/quotes'
 import { ThemeColors, radius, spacing, strokeWidth, typography } from '@/constants/tokens'
 import { useThemeColors } from '@/hooks/useAppTheme'
@@ -49,6 +50,13 @@ const MineScreen = () => {
 	const styles = useMemo(() => createStyles(colors, defaultStyles), [colors, defaultStyles])
 	const musicApis = musicApiStore.useValue() ?? []
 	const version = Constants.expoConfig?.version ?? '1.2.0'
+	const session = useCloud((state) => state.session)
+	const profile = useCloud((state) => state.profile)
+	const cloudValue = session
+		? isSvipProfile(profile)
+			? `SVIP · ${formatSvipExpire(profile)}`
+			: '未开通 SVIP'
+		: '未登录'
 	// 每次进页面换一句，进一次烦一次
 	const quote = useMemo(() => pickRandomQuote(), [])
 
@@ -65,6 +73,14 @@ const MineScreen = () => {
 
 				<Text style={styles.sectionTitle}>{i18n.t('mine.general')}</Text>
 				<View style={styles.sectionCard}>
+					<Row
+						icon="cloud-outline"
+						label="账号与云同步"
+						value={cloudValue}
+						onPress={() => router.push('/(modals)/account' as never)}
+						styles={styles}
+						colors={colors}
+					/>
 					<Row
 						icon="settings-outline"
 						label={i18n.t('settings.title')}

@@ -14,6 +14,9 @@ jobs:
     env:
       EXPO_NO_TELEMETRY: '1'
       CI: '1'
+      # 云端账号体系（配了才会启用，没配就退化成本地模式）
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
     steps:
       - uses: actions/checkout@v4
 
