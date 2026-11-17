@@ -2,6 +2,7 @@ import { useCloud } from '@/cloud'
 import { playbackService } from '@/constants/playbackService'
 import { AppThemeProvider, useAppTheme } from '@/hooks/useAppTheme'
 import LyricManager from '@/helpers/lyricManager'
+import { installFatalHandler, recordFatal } from '@/helpers/crashLog'
 import { useLogTrackPlayerState } from '@/hooks/useLogTrackPlayerState'
 import { useSetupTrackPlayer } from '@/hooks/useSetupTrackPlayer'
 import i18n, { setI18nConfig } from '@/utils/i18n'
@@ -9,10 +10,15 @@ import { router, SplashScreen, Stack } from 'expo-router'
 import { ShareIntentProvider, useShareIntentContext } from 'expo-share-intent'
 import { StatusBar } from 'expo-status-bar'
 import { useCallback, useEffect, useMemo } from 'react'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message'
 import TrackPlayer from 'react-native-track-player'
+
+// 尽量早地挂上兜底：JS 线程的致命错误先落盘再交给 RN 原处理器
+installFatalHandler()
+
 SplashScreen.preventAutoHideAsync()
 
 TrackPlayer.registerPlaybackService(() => playbackService)
@@ -31,7 +37,8 @@ const App = () => {
 	// 云端会话恢复：没配置 Supabase 时内部直接返回，不会阻塞启动
 	const bootstrapCloud = useCloud((state) => state.bootstrap)
 	useEffect(() => {
-		void bootstrapCloud()
+		// 云端任何异常都不该把 App 带走，落盘后继续走本地功能
+		bootstrapCloud().catch((error) => recordFatal(error, 'bootstrap'))
 	}, [bootstrapCloud])
 	// myTrackPlayer.setupTrackPlayer()
 
@@ -270,3 +277,76 @@ const RootNavigation = () => {
 }
 
 export default App
+
+/**
+ * 路由级错误边界。
+ *
+ * release 包里没有红屏，渲染期抛异常会直接 abort（用户看到的就是闪退）。
+ * 交出这个边界后，异常会变成一张可读的错误页，并且已经落盘到本地日志。
+ */
+export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Promise<void> }) {
+	useEffect(() => {
+		recordFatal(error, 'render')
+	}, [error])
+
+	return (
+		<View style={styles.boundary}>
+			<Text style={styles.boundaryTitle}>页面出了点问题</Text>
+			<Text style={styles.boundaryHint}>已记录到「设置 → 应用日志」，重启后可以查看</Text>
+			<ScrollView style={styles.boundaryBox} contentContainerStyle={{ padding: 12 }}>
+				<Text style={styles.boundaryText}>{error?.message || String(error)}</Text>
+			</ScrollView>
+			<Pressable
+				onPress={() => {
+					retry().catch(() => {})
+				}}
+				style={styles.boundaryButton}
+			>
+				<Text style={styles.boundaryButtonText}>重试</Text>
+			</Pressable>
+		</View>
+	)
+}
+
+const styles = StyleSheet.create({
+	boundary: {
+		flex: 1,
+		backgroundColor: '#07060C',
+		paddingHorizontal: 24,
+		paddingTop: 96,
+	},
+	boundaryTitle: {
+		color: '#F6F3F1',
+		fontSize: 22,
+		fontWeight: '600',
+	},
+	boundaryHint: {
+		color: '#8A8496',
+		fontSize: 13,
+		marginTop: 8,
+		marginBottom: 20,
+	},
+	boundaryBox: {
+		flex: 1,
+		backgroundColor: '#12101A',
+		borderRadius: 12,
+	},
+	boundaryText: {
+		color: '#C9C3D4',
+		fontSize: 12,
+		lineHeight: 18,
+	},
+	boundaryButton: {
+		marginTop: 20,
+		alignSelf: 'flex-start',
+		paddingHorizontal: 22,
+		paddingVertical: 12,
+		borderRadius: 999,
+		backgroundColor: '#F0688F',
+	},
+	boundaryButtonText: {
+		color: '#FFFFFF',
+		fontSize: 15,
+		fontWeight: '600',
+	},
+})

@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import { AppState } from 'react-native'
 
+import { recordFatal } from '@/helpers/crashLog'
 import { getCloudConfig } from './config'
 
 /**
@@ -44,7 +45,12 @@ export const buildCloudClient = (url: string, anonKey: string): SupabaseClient =
 	return client
 }
 
-/** 按当前配置（本地覆盖 / 构建期 / 默认）确保客户端存在 */
+/**
+ * 按当前配置（本地覆盖 / 构建期 / 默认）确保客户端存在。
+ *
+ * 注意：这里必须容错。createClient 一旦抛错，如果发生在模块求值阶段，
+ * 整个 JS bundle 会 abort，表现就是「点图标立刻闪退」，连启动图都留不住。
+ */
 export const ensureCloudClient = (): SupabaseClient | null => {
 	const config = getCloudConfig()
 	if (!config.configured) {
@@ -53,7 +59,14 @@ export const ensureCloudClient = (): SupabaseClient | null => {
 		return null
 	}
 	if (supabase && activeUrl === config.url) return supabase
-	return buildCloudClient(config.url, config.anonKey)
+	try {
+		return buildCloudClient(config.url, config.anonKey)
+	} catch (error) {
+		recordFatal(error, 'cloud-client')
+		supabase = null
+		activeUrl = ''
+		return null
+	}
 }
 
 /** 换服务器 / 换 key 时调用：重建客户端并返回 */
@@ -73,5 +86,6 @@ export const requireClient = (): SupabaseClient => {
 	return client
 }
 
-// 启动时按配置先建一次（没配就是 null，调用方一律判空）
-ensureCloudClient()
+// 说明：这里刻意不在模块求值时建客户端。
+// 建客户端一旦抛错会连带整个 bundle abort（点图标即闪退），
+// 所以改为在 bootstrap / 首次使用时按需创建，错误落盘后降级。
