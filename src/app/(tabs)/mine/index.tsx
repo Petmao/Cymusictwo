@@ -4,13 +4,11 @@ import { GradientText } from '@/components/GradientText'
 import { radius, spacing, strokeWidth, typography } from '@/constants/tokens'
 import { useAppTheme } from '@/hooks/useAppTheme'
 import { playListsStore } from '@/helpers/trackPlayerIndex'
-import { musicApiStore } from '@/player/PlayerStore'
 import PersistStatus from '@/store/PersistStatus'
 import { useSleepTimer } from '@/store/sleepTimer'
 import { showToast } from '@/utils/utils'
 import i18n from '@/utils/i18n'
 import { Ionicons } from '@expo/vector-icons'
-import Constants from 'expo-constants'
 import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import React, { useMemo } from 'react'
@@ -30,13 +28,11 @@ const MineScreen = () => {
 
 	const session = useCloud((state) => state.session)
 	const profile = useCloud((state) => state.profile)
-	const musicApis = musicApiStore.useValue() ?? []
 	const playLists = playListsStore.useValue() ?? []
 	const favorites = PersistStatus.useValue('music.favorites') ?? []
 	const localTracks = PersistStatus.useValue('music.importedLocalMusic') ?? []
 	const sleep = useSleepTimer()
 
-	const version = Constants.expoConfig?.version ?? '1.2.0'
 	const isSvip = isSvipProfile(profile)
 	const expireText = session ? (isSvip ? `${formatSvipExpire(profile)} 到期` : '未开通 SVIP') : '未登录'
 	const daysLeft = session && isSvip ? svipDaysLeft(profile) : 0
@@ -401,9 +397,6 @@ const MineScreen = () => {
 					/>
 				</LinearGradient>
 
-				<Text style={styles.footer}>
-					屿声音乐 {version} · 音源 {musicApis.length} 个 · 已是最新
-				</Text>
 			</ScrollView>
 		</GradientScreen>
 	)
@@ -636,12 +629,5 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>['colors']) =>
 			height: strokeWidth,
 			backgroundColor: colors.separator,
 			marginLeft: spacing.lg + 28 + spacing.md,
-		},
-		footer: {
-			marginTop: spacing.lg,
-			textAlign: 'center',
-			fontSize: 10.5,
-			color: colors.textMuted,
-			letterSpacing: 0.02,
 		},
 	})
