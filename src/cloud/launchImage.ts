@@ -80,9 +80,10 @@ const fromIndexJson = async (base: string): Promise<string[]> => {
 }
 
 const fromProbe = async (base: string): Promise<string[]> => {
+	// 目录里约定的命名：v1.png / v2.jpg / 1.jpg … 都认
 	const candidates: string[] = []
 	for (let i = 1; i <= PROBE_COUNT; i += 1) {
-		candidates.push(`${i}.jpg`, `${i}.png`)
+		candidates.push(`v${i}.png`, `v${i}.jpg`, `${i}.jpg`, `${i}.png`)
 	}
 	const found: string[] = []
 	await Promise.all(
@@ -91,7 +92,19 @@ const fromProbe = async (base: string): Promise<string[]> => {
 			if (res && res.ok) found.push(name)
 		}),
 	)
-	return found
+	// 按编号排序，保证取图稳定
+	return found.sort((a, b) => {
+		const num = (x: string) => parseInt(x.replace(/[^0-9]/g, ''), 10) || 0
+		return num(a) - num(b)
+	})
+}
+
+/** 目录本身能直接当图用吗（服务器把 /img/ 重定向到某张图的情况） */
+const rootIsImage = async (base: string): Promise<boolean> => {
+	const res = await withTimeout(fetch(base, { method: 'HEAD' }), 2500)
+	if (!res || !res.ok) return false
+	const type = res.headers?.get?.('content-type') ?? ''
+	return /image\//i.test(type)
 }
 
 const resolveList = async (): Promise<string[]> => {
@@ -110,7 +123,10 @@ const resolveList = async (): Promise<string[]> => {
 export const resolveLaunchImage = async (): Promise<string | null> => {
 	try {
 		const names = await resolveList()
-		if (!names.length) return null
+		if (!names.length) {
+			// 目录里只有一张图、或者服务器把 /img/ 直接重定向到图片
+			return (await rootIsImage(imgBase())) ? imgBase() : null
+		}
 		const pick = names[Math.floor(Math.random() * names.length)]
 		if (/^https?:\/\//i.test(pick)) return pick
 		return imgBase() + pick.replace(/^\/+/, '')
