@@ -1,4 +1,4 @@
-import { useAllVideoSources } from '@/hooks/useAllVideoSources'
+import { PlayableVideo, useAllVideoSources } from '@/hooks/useAllVideoSources'
 import { Ionicons } from '@expo/vector-icons'
 import { AVPlaybackStatus, ResizeMode, Video } from 'expo-av'
 import { router, useLocalSearchParams } from 'expo-router'
@@ -10,14 +10,29 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 /**
  * 纯全屏视频：上滑下一条、下滑上一条、单击暂停/继续。
  *
- * 手势必须是「捕获阶段」拿：Video 是原生视图，普通 onMoveShouldSetPanResponder
- * 会被它先吃掉，表现就是怎么滑都不切视频。所以用 onMoveShouldSetPanResponderCapture，
- * 再用一层透明 Pressable 接单击。
+ * 手势用捕获阶段拿：Video 是原生视图，普通 responder 会被它先吃掉。
+ *
+ * 「只有一个源也能上下滑」：接口型地址（不带 .mp4/.m3u8 后缀）每次请求返回的视频不同，
+ * 所以滑到底时给同一地址加时间戳再要一次，等于无限流；静态直链不重复请求。
  */
+const isDirectFile = (url: string) => /\.(mp4|m4v|mov|m3u8|webm)(\?|$)/i.test(url)
+
+const withFreshParam = (url: string) => {
+	if (isDirectFile(url)) return url
+	const sep = url.includes('?') ? '&' : '?'
+	return `${url}${sep}_t=${Date.now()}`
+}
+
 const VideoPlayerScreen = () => {
 	const params = useLocalSearchParams<{ id?: string }>()
 	const insets = useSafeAreaInsets()
 	const { list: sources, loading } = useAllVideoSources()
+
+	// 滑到底时「现拉一条」的条目放这里，和真实源拼成播放列表
+	const [extra, setExtra] = useState<PlayableVideo[]>([])
+	const feedSeq = useRef(0)
+
+	const list = useMemo<PlayableVideo[]>(() => [...sources, ...extra], [sources, extra])
 
 	const initialIndex = useMemo(() => {
 		const index = sources.findIndex((item) => item.id === params.id)
@@ -29,30 +44,50 @@ const VideoPlayerScreen = () => {
 	const [failed, setFailed] = useState(false)
 	const videoRef = useRef<Video | null>(null)
 	const offset = useRef(new Animated.Value(0)).current
-	const sourcesRef = useRef(sources)
+	const listRef = useRef<PlayableVideo[]>(list)
 	const indexRef = useRef(index)
 
 	useEffect(() => {
-		sourcesRef.current = sources
-	}, [sources])
+		listRef.current = list
+	}, [list])
 
 	useEffect(() => {
 		indexRef.current = index
 	}, [index])
 
+	const current = list[index]
+
 	const switchTo = useCallback((delta: number) => {
-		const total = sourcesRef.current.length
-		if (total <= 1) return
-		const next = (indexRef.current + delta + total) % total
-		setFailed(false)
-		setPaused(false)
-		setIndex(next)
+		const items = listRef.current
+		if (items.length === 0) return
+		const next = indexRef.current + delta
+		if (next >= 0 && next < items.length) {
+			setFailed(false)
+			setPaused(false)
+			setIndex(next)
+			return
+		}
+		// 往下滑到底：接口型地址再要一条
+		if (delta > 0) {
+			const base = items[items.length - 1]
+			if (!base || isDirectFile(base.url)) return
+			feedSeq.current += 1
+			const fresh: PlayableVideo = {
+				...base,
+				id: `${base.id}-live-${feedSeq.current}`,
+				url: withFreshParam(base.url),
+			}
+			listRef.current = [...items, fresh]
+			setExtra((prev) => [...prev, fresh])
+			setFailed(false)
+			setPaused(false)
+			setIndex(items.length)
+		}
 	}, [])
 
 	const panResponder = useMemo(
 		() =>
 			PanResponder.create({
-				// 捕获阶段，先于 Video 原生视图拿到手势
 				onStartShouldSetPanResponderCapture: () => false,
 				onMoveShouldSetPanResponderCapture: (_event, gesture) =>
 					Math.abs(gesture.dy) > 10 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
@@ -94,8 +129,6 @@ const VideoPlayerScreen = () => {
 		[offset, switchTo],
 	)
 
-	const current = sources[index]
-
 	const handlePress = useCallback(async () => {
 		const video = videoRef.current
 		if (!video) return
@@ -124,12 +157,12 @@ const VideoPlayerScreen = () => {
 	)
 
 	useEffect(() => {
-		// 还在拉云端源的时候 sources 必然是空的，这时候直接 back 会把用户弹出去
+		// 还在拉云端源时 sources 必然是空的，这时候直接 back 会把用户弹出去
 		if (loading) return
-		if (!current && sources.length === 0) {
+		if (!current && list.length === 0) {
 			router.back()
 		}
-	}, [current, sources.length, loading])
+	}, [current, list.length, loading])
 
 	return (
 		<View style={styles.root}>
@@ -175,11 +208,10 @@ const VideoPlayerScreen = () => {
 						<Text style={styles.captionText} numberOfLines={1}>
 							{current.title}
 						</Text>
-						{sources.length > 1 ? (
-							<Text style={styles.captionIndex}>
-								{index + 1} / {sources.length}
-							</Text>
-						) : null}
+						<Text style={styles.captionIndex}>
+							{index + 1} / {list.length}
+							{list.length > sources.length ? '+' : ''}
+						</Text>
 					</View>
 				) : null}
 			</Animated.View>

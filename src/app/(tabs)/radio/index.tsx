@@ -1,26 +1,19 @@
 import { GradientScreen } from '@/components/GradientScreen'
+import { InlineSearchBar } from '@/components/InlineSearchBar'
 import { RadioList } from '@/components/RadioList'
-import { screenPadding } from '@/constants/tokens'
+import { screenPadding, spacing } from '@/constants/tokens'
 import { playlistNameFilter } from '@/helpers/filter'
 import { Playlist } from '@/helpers/types'
-import { useNavigationSearch } from '@/hooks/useNavigationSearch'
 import { usePlaylists } from '@/store/library'
 import i18n from '@/utils/i18n'
-import { useHeaderHeight } from '@react-navigation/elements'
 import { useRouter } from 'expo-router'
-import { useMemo } from 'react'
-import { ScrollView } from 'react-native'
+import { useMemo, useState } from 'react'
+import { ScrollView, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 const RadiolistsScreen = () => {
 	const router = useRouter()
-	const headerHeight = useHeaderHeight()
-
-	const search = useNavigationSearch({
-		searchBarOptions: {
-			placeholder: i18n.t('find.inRadio'),
-			cancelButtonText: i18n.t('find.cancel'),
-		},
-	})
+	const [search, setSearch] = useState('')
 
 	const { playlists } = usePlaylists()
 	const filteredPlayLists = useMemo(() => {
@@ -34,21 +27,26 @@ const RadiolistsScreen = () => {
 
 	return (
 		<GradientScreen>
-			{/* 导航条透明，顶部留白自己补，否则第一张卡会钻到搜索框底下 */}
-			<ScrollView
-				contentInsetAdjustmentBehavior="never"
-				contentContainerStyle={{
-					paddingTop: headerHeight,
-					paddingHorizontal: screenPadding.horizontal,
-					paddingBottom: 160,
-				}}
-			>
-				<RadioList
-					scrollEnabled={false}
-					playlists={filteredPlayLists}
-					onPlaylistPress={handlePlaylistPress}
-				/>
-			</ScrollView>
+			<SafeAreaView style={{ flex: 1 }} edges={['top']}>
+				{/* 自绘搜索框：位置写在页面里，不会再被原生导航栏顶下去 */}
+				<View style={{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 4 }}>
+					<InlineSearchBar placeholder={i18n.t('find.inRadio')} onChange={setSearch} />
+				</View>
+				<ScrollView
+					contentInsetAdjustmentBehavior="never"
+					contentContainerStyle={{
+						paddingHorizontal: screenPadding.horizontal,
+						paddingBottom: 160,
+						paddingTop: spacing.xs,
+					}}
+				>
+					<RadioList
+						scrollEnabled={false}
+						playlists={filteredPlayLists}
+						onPlaylistPress={handlePlaylistPress}
+					/>
+				</ScrollView>
+			</SafeAreaView>
 		</GradientScreen>
 	)
 }

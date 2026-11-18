@@ -1,9 +1,9 @@
 import { GradientScreen } from '@/components/GradientScreen'
+import { InlineSearchBar } from '@/components/InlineSearchBar'
 import { SearchList } from '@/components/SearchList'
 import { ThemeColors, radius, spacing, typography } from '@/constants/tokens'
 import { useAppTheme, useThemeColors } from '@/hooks/useAppTheme'
 import searchAll from '@/helpers/searchAll'
-import { useNavigationSearch } from '@/hooks/useNavigationSearch'
 import {
 	addSearchHistory,
 	clearSearchHistory,
@@ -17,23 +17,18 @@ import {
 	Animated,
 	Dimensions,
 	FlatList,
-	Platform,
 	Pressable,
 	StyleSheet,
 	Text,
 	View,
 } from 'react-native'
 import { Track } from 'react-native-track-player'
-import { useHeaderHeight } from '@react-navigation/elements'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 type SearchType = 'songs' | 'artists'
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
+const { width: SCREEN_WIDTH } = Dimensions.get('window')
 const SEGMENT_WIDTH = (SCREEN_WIDTH - 32 - 4) / 2 // 32 for padding, 4 for container padding
-const SEARCH_OFFSET = Platform.select({
-	ios: SCREEN_HEIGHT * 0.11, // 约11%的屏幕高度
-	android: 0,
-})
 
 /** 结果缓存：同一个关键词回来时先给旧结果，再去刷新，避免"回来一片空白" */
 const resultsCache = new Map<string, { data: Track[]; hasMore: boolean }>()
@@ -60,43 +55,14 @@ const SearchlistsScreen = () => {
 	const slideAnim = useRef(
 		new Animated.Value(lastSearchSession?.type === 'artists' ? SEGMENT_WIDTH : 0),
 	).current
-	const headerHeight = useHeaderHeight()
-	const contentOffsetAnim = useRef(new Animated.Value(0)).current
 
-	const handleSearchFocus = useCallback(() => {
-		Animated.spring(contentOffsetAnim, {
-			toValue: -SEARCH_OFFSET,
-			useNativeDriver: true,
-			tension: 100,
-			friction: 10,
-		}).start()
-	}, [contentOffsetAnim])
+	// 页面内搜索框：自带 400ms 防抖，输入不再走原生搜索条
+	const [search, setSearch] = useState('')
 
 	const handleSearchCancel = useCallback(() => {
-		// 取消搜索要连"历史/会话带进来的关键词"一起清，否则仍停在结果页
+		// 清空要连"历史/会话带进来的关键词"一起清，否则仍停在结果页
 		setPickedKeyword(null)
-		Animated.spring(contentOffsetAnim, {
-			toValue: 0,
-			useNativeDriver: true,
-			tension: 100,
-			friction: 10,
-		}).start()
-	}, [contentOffsetAnim])
-
-	// 一定要 memo：对象字面量会让原生搜索框每次渲染都被重配，输入就没反应了
-	const searchBarOptions = useMemo(
-		() => ({
-			placeholder: i18n.t('find.inSearch'),
-			cancelButtonText: i18n.t('find.cancel'),
-		}),
-		[],
-	)
-
-	const search = useNavigationSearch({
-		searchBarOptions,
-		onFocus: handleSearchFocus,
-		onCancel: handleSearchCancel,
-	})
+	}, [])
 
 	// 用户真开始打字了，就放弃历史/会话带来的关键词（挂载时 search 为空，不会误清）
 	useEffect(() => {
@@ -231,15 +197,15 @@ const SearchlistsScreen = () => {
 
 	return (
 		<GradientScreen>
-			<View style={[styles.safeArea, { paddingTop: headerHeight }]}>
-			<Animated.View
-				style={[
-					styles.contentContainer,
-					{
-						transform: [{ translateY: contentOffsetAnim }],
-					},
-				]}
-			>
+			<SafeAreaView style={styles.safeArea} edges={['top']}>
+			<View style={styles.contentContainer}>
+				<View style={styles.searchBarWrap}>
+					<InlineSearchBar
+						placeholder={i18n.t('find.inSearch')}
+						onChange={setSearch}
+						onCancel={handleSearchCancel}
+					/>
+				</View>
 				<View style={styles.segmentedControlContainer}>
 					<View style={styles.segmentedControl}>
 						<Animated.View
@@ -329,8 +295,8 @@ const SearchlistsScreen = () => {
 						/>
 					</View>
 				)}
-			</Animated.View>
 			</View>
+			</SafeAreaView>
 		</GradientScreen>
 	)
 }
@@ -344,6 +310,11 @@ const createStyles = (colors: ThemeColors, isDark: boolean) =>
 	safeArea: {
 		flex: 1,
 		backgroundColor: 'transparent',
+	},
+	searchBarWrap: {
+		paddingHorizontal: 16,
+		paddingTop: 6,
+		paddingBottom: 4,
 	},
 	contentContainer: {
 		flex: 1,

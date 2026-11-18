@@ -50,6 +50,9 @@ drop policy if exists prize_orders_read on public.prize_orders;
 create policy prize_orders_read on public.prize_orders
   for select using (auth.uid() = user_id);
 
+grant select on public.prizes to anon, authenticated;
+grant select on public.prize_orders to authenticated;
+
 -- ── 兑换：扣分 + 减库存 + 落单，全在事务里 ─────────────────────
 create or replace function public.redeem_prize(p_prize_id text)
 returns jsonb

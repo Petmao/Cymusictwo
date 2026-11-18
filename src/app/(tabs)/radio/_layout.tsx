@@ -1,4 +1,3 @@
-import { getStackScreenWithSearchBar } from '@/constants/layout'
 import { useAppTheme } from '@/hooks/useAppTheme'
 import { useDefaultStyles } from '@/styles'
 import { nowLanguage } from '@/utils/i18n'
@@ -13,12 +12,7 @@ const RadiolistsScreenLayout = () => {
 	return (
 		<View style={defaultStyles.container} key={language}>
 			<Stack>
-				<Stack.Screen
-					name="index"
-					options={{
-						...getStackScreenWithSearchBar(colors, gradients.screen[0]),
-					}}
-				/>
+				<Stack.Screen name="index" options={{ headerShown: false }} />
 				<Stack.Screen
 					name="[name]"
 					options={{
