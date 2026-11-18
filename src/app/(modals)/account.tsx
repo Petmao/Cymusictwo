@@ -72,7 +72,7 @@ const AccountScreen = () => {
 		try {
 			const result = await syncNow(session.user.id)
 			setSyncTip(
-				`已同步：收藏 ${result.favorites.local} 首（新增 ${result.favorites.added}）· 歌单 ${result.playlists.total} 个（新增 ${result.playlists.addedPlaylists}）`,
+				`已同步：收藏 ${result.favorites.total} 首（新增 ${result.favorites.added}）· 歌单 ${result.playlists.total} 个（新增 ${result.playlists.addedPlaylists}）`,
 			)
 		} catch (err) {
 			setSyncTip(err instanceof Error ? err.message : String(err))

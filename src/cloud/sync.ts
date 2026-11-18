@@ -207,8 +207,8 @@ const pullPlaylists = async (userId: string) => {
 }
 
 export type SyncResult = {
-	favorites: { local: number; added: number }
-	playlists: { local: number; addedPlaylists: number; addedItems: number }
+	favorites: { total: number; added: number }
+	playlists: { total: number; addedPlaylists: number; addedItems: number }
 	pushedFavorites: number
 	pushedPlaylists: { playlists: number; items: number }
 }

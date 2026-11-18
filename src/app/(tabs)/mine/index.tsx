@@ -410,10 +410,11 @@ type RowProps = {
 	value?: string
 	onPress?: () => void
 	isLast?: boolean
+	chevronColor?: string
 	styles: ReturnType<typeof createStyles>
 }
 
-const Row = ({ icon, label, value, onPress, isLast, styles }: RowProps) => (
+const Row = ({ icon, label, value, onPress, isLast, chevronColor, styles }: RowProps) => (
 	<>
 		<TouchableOpacity activeOpacity={0.7} onPress={onPress} disabled={!onPress}>
 			<View style={styles.row}>

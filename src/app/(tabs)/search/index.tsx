@@ -1,3 +1,4 @@
+import { GradientScreen } from '@/components/GradientScreen'
 import { SearchList } from '@/components/SearchList'
 import { ThemeColors, radius, spacing, typography } from '@/constants/tokens'
 import { useThemeColors } from '@/hooks/useAppTheme'
