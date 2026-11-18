@@ -1,4 +1,4 @@
-import { useThemeColors } from '@/hooks/useAppTheme'
+import { useAppTheme, useThemeColors } from '@/hooks/useAppTheme'
 import { nowLanguage } from '@/utils/i18n'
 import { useNavigation } from 'expo-router'
 import { debounce } from 'lodash'
@@ -28,17 +28,22 @@ export const useNavigationSearch = ({
 	const navigation = useNavigation()
 	const language = nowLanguage.useValue()
 	const colors = useThemeColors()
+	const { gradients, isDark } = useAppTheme()
+	/** 导航条底色 = 页面渐变第一段，搜索框背后的横条就不会是另一块颜色 */
+	const barColor = gradients.screen[0]
+	/** 输入框本体：浅色主题给半透明白玻璃，深色给半透明白，都不抢渐变的色 */
+	const fieldColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.72)'
 
 	const defaultSearchOptions = useMemo<SearchBarProps>(
 		() => ({
 			tintColor: colors.primary,
-			barTintColor: colors.background,
-			backgroundColor: colors.surfaceMuted,
+			barTintColor: barColor,
+			backgroundColor: fieldColor,
 			textColor: colors.text,
-			hintTextColor: colors.placeholder,
+			hintTextColor: colors.textMuted,
 			hideWhenScrolling: false,
 		}),
-		[colors.primary, colors.background, colors.surfaceMuted, colors.text, colors.placeholder],
+		[colors.primary, colors.text, colors.textMuted, barColor, fieldColor],
 	)
 
 	// 回调放 ref，避免调用方每次渲染换函数导致重复注册

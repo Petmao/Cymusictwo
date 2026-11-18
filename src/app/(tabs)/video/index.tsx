@@ -1,27 +1,30 @@
 import { useAppTheme } from '@/hooks/useAppTheme'
-import i18n from '@/utils/i18n'
-import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import React, { useMemo } from 'react'
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from 'react-native-svg'
 import { GradientScreen } from '@/components/GradientScreen'
-import { radius, spacing, strokeWidth, typography } from '@/constants/tokens'
+import { radius, spacing, strokeWidth } from '@/constants/tokens'
 import { isSvipProfile, useCloud } from '@/cloud'
-import { useVideoSources } from '@/store/videoSources'
+import { useAllVideoSources } from '@/hooks/useAllVideoSources'
+import { Ionicons } from '@expo/vector-icons'
 
+/**
+ * 视频页只负责「看」。
+ * 源的增删全部在「我的 – 设置 – 视频源」，后台也可以直接下发（app_config.video_sources）。
+ */
 const VideoScreen = () => {
 	const { colors, gradients } = useAppTheme()
 	const insets = useSafeAreaInsets()
-	const sources = useVideoSources()
+	const { list: videos, loading } = useAllVideoSources()
 	const session = useCloud((state) => state.session)
 	const profile = useCloud((state) => state.profile)
 	const cloudReady = useCloud((state) => state.configured)
 
 	// 云端配好之后视频就是 SVIP 专属；没配 Supabase 时保持本地模式，本地源照常能放
 	const locked = cloudReady && !isSvipProfile(profile)
-	const hasSources = sources.length > 0
+	const hasVideos = videos.length > 0
 
 	const styles = useMemo(() => createStyles(), [])
 
@@ -49,9 +52,19 @@ const VideoScreen = () => {
 		)
 	}
 
+	if (loading && !hasVideos) {
+		return (
+			<GradientScreen>
+				<View style={styles.empty}>
+					<ActivityIndicator color={gradients.textGlow[0]} />
+				</View>
+			</GradientScreen>
+		)
+	}
+
 	return (
 		<GradientScreen>
-			{hasSources ? (
+			{hasVideos ? (
 				<ScrollView
 					contentInsetAdjustmentBehavior="automatic"
 					contentContainerStyle={[
@@ -59,8 +72,7 @@ const VideoScreen = () => {
 						{ paddingTop: insets.top + spacing.lg, paddingBottom: 150 },
 					]}
 				>
-					<Text style={[styles.label, { color: colors.textMuted }]}>视频</Text>
-					{sources.map((item) => (
+					{videos.map((item) => (
 						<TouchableOpacity
 							key={item.id}
 							activeOpacity={0.75}
@@ -81,9 +93,16 @@ const VideoScreen = () => {
 									<Ionicons name="play" size={14} color="#fff" />
 								</View>
 								<View style={styles.cardText}>
-									<Text numberOfLines={1} style={[styles.cardTitle, { color: colors.text }]}>
-										{item.title}
-									</Text>
+									<View style={styles.titleRow}>
+										<Text numberOfLines={1} style={[styles.cardTitle, { color: colors.text }]}>
+											{item.title}
+										</Text>
+										{item.remote ? (
+											<View style={[styles.tag, { backgroundColor: gradients.glow }]}>
+												<Text style={styles.tagText}>云端</Text>
+											</View>
+										) : null}
+									</View>
 									<Text numberOfLines={1} style={[styles.cardUrl, { color: colors.textMuted }]}>
 										{item.url}
 									</Text>
@@ -92,15 +111,6 @@ const VideoScreen = () => {
 							</View>
 						</TouchableOpacity>
 					))}
-
-					<TouchableOpacity
-						activeOpacity={0.7}
-						onPress={() => router.push('/(modals)/videosources')}
-					>
-						<Text style={[styles.manage, { color: colors.textMuted }]}>
-							{i18n.t('settings.title')} · 管理视频源
-						</Text>
-					</TouchableOpacity>
 				</ScrollView>
 			) : (
 				<View style={styles.empty}>
@@ -118,7 +128,7 @@ const VideoScreen = () => {
 						<Ionicons name="videocam-outline" size={54} color={gradients.textGlow[0]} />
 					</View>
 
-					<Text style={[styles.line1, { color: '#FFFFFF' }]}>请到设置里面设置视频源</Text>
+					<Text style={[styles.line1, { color: colors.text }]}>还没有视频</Text>
 					<Svg width="100%" height={40} style={styles.line2}>
 						<Defs>
 							<SvgLinearGradient id="veTitle" x1="0" y1="0" x2="1" y2="0">
@@ -131,9 +141,9 @@ const VideoScreen = () => {
 							y={28}
 							textAnchor="middle"
 							fill="url(#veTitle)"
-							fontSize={24}
+							fontSize={22}
 							fontWeight="800"
-							letterSpacing={1}
+							letterSpacing={0.6}
 						>
 							开启新视界哟
 						</SvgText>
@@ -141,14 +151,9 @@ const VideoScreen = () => {
 
 					<View style={styles.rule} />
 
-					<TouchableOpacity
-						activeOpacity={0.8}
-						onPress={() => router.push('/(modals)/videosources')}
-					>
-						<View style={styles.pillBtn}>
-							<Text style={styles.pillText}>去设置</Text>
-						</View>
-					</TouchableOpacity>
+					<Text style={[styles.emptyHint, { color: colors.textMuted }]}>
+						视频源在「我的 · 设置 · 视频源」里添加
+					</Text>
 				</View>
 			)}
 		</GradientScreen>
@@ -161,11 +166,6 @@ const createStyles = () =>
 	StyleSheet.create({
 		listContent: {
 			paddingHorizontal: spacing.lg,
-		},
-		label: {
-			...typography.label,
-			marginLeft: spacing.sm,
-			marginBottom: spacing.sm,
 		},
 		card: {
 			flexDirection: 'row',
@@ -190,19 +190,31 @@ const createStyles = () =>
 			flex: 1,
 			marginRight: spacing.sm,
 		},
+		titleRow: {
+			flexDirection: 'row',
+			alignItems: 'center',
+		},
 		cardTitle: {
 			fontSize: 15,
 			fontWeight: '600',
 			letterSpacing: -0.1,
+			flexShrink: 1,
+		},
+		tag: {
+			marginLeft: 6,
+			paddingHorizontal: 6,
+			paddingVertical: 1.5,
+			borderRadius: radius.pill,
+		},
+		tagText: {
+			fontSize: 9.5,
+			fontWeight: '700',
+			color: '#FFFFFF',
+			letterSpacing: 0.2,
 		},
 		cardUrl: {
 			fontSize: 11,
 			marginTop: 3,
-		},
-		manage: {
-			textAlign: 'center',
-			fontSize: 12,
-			marginTop: spacing.lg,
 		},
 		empty: {
 			flex: 1,
@@ -229,7 +241,6 @@ const createStyles = () =>
 			fontSize: 17,
 			fontWeight: '700',
 			letterSpacing: -0.2,
-			color: '#FFFFFF',
 		},
 		lockCircle: {
 			width: 108,
@@ -256,6 +267,12 @@ const createStyles = () =>
 			marginTop: spacing.sm,
 			marginBottom: spacing.sm,
 			backgroundColor: 'rgba(240,106,150,0.5)',
+		},
+		emptyHint: {
+			marginTop: spacing.md,
+			fontSize: 12.5,
+			lineHeight: 19,
+			textAlign: 'center',
 		},
 		pillBtn: {
 			paddingHorizontal: 22,

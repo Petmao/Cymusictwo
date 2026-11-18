@@ -6,7 +6,6 @@ import {
 	svipDaysLeft,
 	useCloud,
 } from '@/cloud'
-import { DEFAULT_CLOUD_URL } from '@/cloud/config'
 import { registerCurrentDevice } from '@/cloud/device'
 import { syncNow } from '@/cloud/sync'
 import { Ionicons } from '@expo/vector-icons'
@@ -31,9 +30,6 @@ const AccountScreen = () => {
 	const styles = useMemo(() => createStyles(colors), [colors])
 	const insets = useSafeAreaInsets()
 
-	const configured = useCloud((s) => s.configured)
-	const serverUrl = useCloud((s) => s.serverUrl)
-	const configure = useCloud((s) => s.configure)
 	const session = useCloud((s) => s.session)
 	const profile = useCloud((s) => s.profile)
 	const busy = useCloud((s) => s.busy)
@@ -48,10 +44,6 @@ const AccountScreen = () => {
 	const [password, setPassword] = useState('')
 	const [code, setCode] = useState('')
 	const [syncing, setSyncing] = useState(false)
-	const [editingServer, setEditingServer] = useState(!configured)
-	const [serverInput, setServerInput] = useState(serverUrl || DEFAULT_CLOUD_URL)
-	const [keyInput, setKeyInput] = useState('')
-	const [savingServer, setSavingServer] = useState(false)
 	const [syncTip, setSyncTip] = useState<string | null>(null)
 
 	const loggedIn = Boolean(session?.user)
@@ -92,91 +84,22 @@ const AccountScreen = () => {
 		}
 	}
 
-	const handleSaveServer = async () => {
-		setSavingServer(true)
-		try {
-			await configure(serverInput, keyInput)
-			setEditingServer(false)
-			setKeyInput('')
-			Alert.alert('已连接', `服务器：${serverInput.trim().replace(/\/+$/, '')}`)
-		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err)
-			Alert.alert('连接失败', message)
-		} finally {
-			setSavingServer(false)
-		}
+	const handleSignIn = () => {
+		clearError()
+		signIn(email, password).catch(() => undefined)
 	}
 
-	const serverHost = (serverUrl || DEFAULT_CLOUD_URL).replace(/^https?:\/\//, '')
-
-	if (editingServer) {
-		return (
-			<KeyboardAvoidingView
-				style={styles.container}
-				behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-			>
-				<ScrollView
-					contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 40 }}
-					keyboardShouldPersistTaps="handled"
-				>
-					<View style={styles.header}>
-						<Pressable
-							hitSlop={12}
-							onPress={() => (configured ? setEditingServer(false) : router.back())}
-						>
-							<Ionicons name="chevron-back" size={22} color={colors.primary} />
-						</Pressable>
-						<Text style={styles.title}>服务器设置</Text>
-						<View style={{ width: 22 }} />
-					</View>
-
-					<View style={styles.card}>
-						<Text style={styles.label}>服务器地址</Text>
-						<TextInput
-							value={serverInput}
-							onChangeText={setServerInput}
-							style={styles.input}
-							placeholder={DEFAULT_CLOUD_URL}
-							placeholderTextColor={colors.placeholder}
-							autoCapitalize="none"
-							autoCorrect={false}
-							keyboardType="url"
-						/>
-
-						<Text style={[styles.label, { marginTop: 12 }]}>anon key</Text>
-						<TextInput
-							value={keyInput}
-							onChangeText={setKeyInput}
-							style={[styles.input, { minHeight: 76 }]}
-							placeholder="eyJhbGciOiJIUzI1NiIs…"
-							placeholderTextColor={colors.placeholder}
-							autoCapitalize="none"
-							autoCorrect={false}
-							multiline
-						/>
-
-						<Text style={styles.hint}>
-							在服务器上跑 `node scripts/gen-keys.mjs`，把输出的 ANON_KEY 整行粘到上面。
-							地址默认就是 {DEFAULT_CLOUD_URL}，部署到别的域名再改这里。
-						</Text>
-
-						<Pressable
-							style={[styles.primaryButton, { marginTop: 14, opacity: savingServer ? 0.6 : 1 }]}
-							onPress={handleSaveServer}
-							disabled={savingServer}
-						>
-							{savingServer ? (
-								<ActivityIndicator size="small" color="#FFFFFF" />
-							) : (
-								<Text style={styles.primaryButtonText}>保存并连接</Text>
-							)}
-						</Pressable>
-					</View>
-
-					{error ? <Text style={styles.errorText}>{error}</Text> : null}
-				</ScrollView>
-			</KeyboardAvoidingView>
-		)
+	const handleSignUp = () => {
+		clearError()
+		signUp(email, password)
+			.then(({ needConfirm }) => {
+				if (needConfirm) {
+					Alert.alert('注册成功', '确认邮件已发出，点邮件里的链接后再回来登录')
+				} else {
+					Alert.alert('注册成功', '账号已创建，直接登录即可')
+				}
+			})
+			.catch(() => undefined)
 	}
 
 	return (
@@ -221,34 +144,20 @@ const AccountScreen = () => {
 								autoCapitalize="none"
 							/>
 							{error ? <Text style={styles.error}>{error}</Text> : null}
-							<View style={styles.rowButtons}>
-								<Pressable
-									style={[styles.primaryButton, busy && { opacity: 0.6 }]}
-									disabled={busy}
-									onPress={() => {
-										clearError()
-										signIn(email, password).catch(() => undefined)
-									}}
-								>
-									{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>登录</Text>}
-								</Pressable>
-								<Pressable
-									style={[styles.ghostButton, busy && { opacity: 0.6 }]}
-									disabled={busy}
-									onPress={() => {
-										clearError()
-										signUp(email, password)
-											.then(({ needConfirm }) => {
-												if (needConfirm) {
-													Alert.alert('注册成功', '已发送确认邮件，点邮件里的链接后再回来登录')
-												}
-											})
-											.catch(() => undefined)
-									}}
-								>
-									<Text style={styles.ghostText}>注册</Text>
-								</Pressable>
-							</View>
+							<Pressable
+								style={[styles.primaryButton, busy && { opacity: 0.6 }]}
+								disabled={busy}
+								onPress={handleSignIn}
+							>
+								{busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>登录</Text>}
+							</Pressable>
+							<Pressable
+								style={[styles.ghostButton, busy && { opacity: 0.6 }]}
+								disabled={busy}
+								onPress={handleSignUp}
+							>
+								<Text style={styles.ghostText}>注册新账号</Text>
+							</Pressable>
 						</View>
 						<Text style={styles.footnote}>
 							登录后可以把自己的收藏和歌单同步到云端，换设备登录直接拉回来。
@@ -341,17 +250,6 @@ const AccountScreen = () => {
 								<Text style={styles.actionText}>授权设备</Text>
 								<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
 							</Pressable>
-
-							<View style={styles.divider} />
-
-							<Pressable style={styles.actionRow} onPress={() => setEditingServer(true)}>
-								<Ionicons name="server-outline" size={18} color={colors.primary} />
-								<Text style={styles.actionText}>服务器</Text>
-								<Text style={styles.serverValue} numberOfLines={1}>
-									{serverHost}
-								</Text>
-								<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-							</Pressable>
 						</View>
 
 						<Pressable
@@ -403,25 +301,29 @@ const createStyles = (colors: ThemeColors) =>
 			fontSize: 15,
 		},
 		rowButtons: { flexDirection: 'row', gap: 10, marginTop: spacing.lg },
+		/** 登录：整行主按钮 */
 		primaryButton: {
-			flex: 1,
-			height: 44,
-			borderRadius: radius.sm,
+			height: 48,
+			borderRadius: radius.pill,
 			backgroundColor: colors.primary,
 			alignItems: 'center',
 			justifyContent: 'center',
+			marginTop: spacing.lg,
 		},
 		primaryText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+		primaryButtonText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
+		/** 注册：整行描边按钮，和登录上下分开，不再挤在同一行 */
 		ghostButton: {
-			flex: 1,
-			height: 44,
-			borderRadius: radius.sm,
+			height: 48,
+			borderRadius: radius.pill,
 			alignItems: 'center',
 			justifyContent: 'center',
-			borderWidth: StyleSheet.hairlineWidth,
+			marginTop: spacing.sm + 2,
+			borderWidth: 1,
 			borderColor: colors.border,
+			backgroundColor: colors.surfaceMuted,
 		},
-		ghostText: { color: colors.text, fontSize: 15, fontWeight: '500' },
+		ghostText: { color: colors.text, fontSize: 15, fontWeight: '600' },
 		error: { marginTop: spacing.md, color: colors.error, fontSize: 13 },
 		hint: { color: colors.textMuted, fontSize: 14, lineHeight: 22 },
 		footnote: {
@@ -490,15 +392,6 @@ const createStyles = (colors: ThemeColors) =>
 			paddingVertical: spacing.sm,
 		},
 		actionText: { flex: 1, color: colors.text, fontSize: 15 },
-		serverValue: { fontSize: 12, color: colors.textMuted, maxWidth: 160, marginRight: 6 },
-		primaryButton: {
-			height: 46,
-			borderRadius: radius.pill ?? 999,
-			backgroundColor: colors.primary,
-			alignItems: 'center',
-			justifyContent: 'center',
-		},
-		primaryButtonText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
 		errorText: { marginTop: 10, marginHorizontal: 16, fontSize: 12, color: colors.error },
 		syncTip: { color: colors.textMuted, fontSize: 12, marginTop: 6, lineHeight: 18 },
 		divider: {

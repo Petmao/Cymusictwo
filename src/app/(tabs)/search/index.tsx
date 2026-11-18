@@ -1,7 +1,7 @@
 import { GradientScreen } from '@/components/GradientScreen'
 import { SearchList } from '@/components/SearchList'
 import { ThemeColors, radius, spacing, typography } from '@/constants/tokens'
-import { useThemeColors } from '@/hooks/useAppTheme'
+import { useAppTheme, useThemeColors } from '@/hooks/useAppTheme'
 import searchAll from '@/helpers/searchAll'
 import { useNavigationSearch } from '@/hooks/useNavigationSearch'
 import {
@@ -45,7 +45,8 @@ let lastSearchSession: { keyword: string; type: SearchType } | null = null
 
 const SearchlistsScreen = () => {
 	const colors = useThemeColors()
-	const styles = useMemo(() => createStyles(colors), [colors])
+	const { gradients, isDark } = useAppTheme()
+	const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark])
 	// const router = useRouter()
 	const [searchResults, setSearchResults] = useState<Track[]>([])
 	const [page, setPage] = useState(1)
@@ -333,11 +334,11 @@ const SearchlistsScreen = () => {
 	)
 }
 
-const createStyles = (colors: ThemeColors) =>
+const createStyles = (colors: ThemeColors, isDark: boolean) =>
 	StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: colors.background,
+		backgroundColor: 'transparent',
 	},
 	safeArea: {
 		flex: 1,
@@ -355,7 +356,7 @@ const createStyles = (colors: ThemeColors) =>
 	},
 	segmentedControl: {
 		flexDirection: 'row',
-		backgroundColor: colors.background,
+		backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(255,255,255,0.62)',
 		borderRadius: 8,
 		padding: 2,
 		position: 'relative',
@@ -368,7 +369,7 @@ const createStyles = (colors: ThemeColors) =>
 		zIndex: 1,
 	},
 	activeSegment: {
-		backgroundColor: colors.surfaceElevated,
+		backgroundColor: isDark ? 'rgba(255,255,255,0.18)' : '#FFFFFF',
 		borderRadius: 6,
 		shadowColor: colors.shadow,
 		shadowOffset: {

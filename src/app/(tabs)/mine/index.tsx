@@ -1,6 +1,5 @@
 import { formatSvipExpire, growthProgress, isSvipProfile, svipDaysLeft, useCloud } from '@/cloud'
 import { GradientScreen } from '@/components/GradientScreen'
-import { GradientText } from '@/components/GradientText'
 import { radius, spacing, strokeWidth, typography } from '@/constants/tokens'
 import { useAppTheme } from '@/hooks/useAppTheme'
 import { playListsStore } from '@/helpers/trackPlayerIndex'
@@ -13,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { router } from 'expo-router'
 import React, { useMemo } from 'react'
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 type ActionPill = {
 	key: string
@@ -23,8 +23,8 @@ type ActionPill = {
 }
 
 const MineScreen = () => {
-	const { colors, gradients } = useAppTheme()
-	const styles = useMemo(() => createStyles(colors), [colors])
+	const { colors, gradients, isDark } = useAppTheme()
+	const styles = useMemo(() => createStyles(colors, isDark), [colors, isDark])
 
 	const session = useCloud((state) => state.session)
 	const profile = useCloud((state) => state.profile)
@@ -214,8 +214,8 @@ const MineScreen = () => {
 
 	return (
 		<GradientScreen>
+			<SafeAreaView style={styles.safe} edges={['top']}>
 			<ScrollView
-				contentInsetAdjustmentBehavior="automatic"
 				contentContainerStyle={styles.content}
 				showsVerticalScrollIndicator={false}
 			>
@@ -236,7 +236,9 @@ const MineScreen = () => {
 						/>
 						<View style={styles.vipHeader}>
 							<View style={styles.vipTitleWrap}>
-								<GradientText text="屿声会员 · SVIP" size={17} from="gold" weight="800" />
+								<Text style={styles.vipTitle} numberOfLines={1}>
+									屿声会员 · SVIP
+								</Text>
 							</View>
 							<Text style={styles.vipExpire}>{expireText}</Text>
 						</View>
@@ -376,7 +378,7 @@ const MineScreen = () => {
 					colors={gradients.glass}
 					start={{ x: 0.1, y: 0 }}
 					end={{ x: 0.9, y: 1 }}
-					style={styles.groupCard}
+					style={[styles.groupCard, styles.toolCard]}
 				>
 					<Row
 						icon="moon"
@@ -398,6 +400,7 @@ const MineScreen = () => {
 				</LinearGradient>
 
 			</ScrollView>
+			</SafeAreaView>
 		</GradientScreen>
 	)
 }
@@ -430,13 +433,27 @@ const Row = ({ icon, label, value, onPress, isLast, chevronColor, styles }: RowP
 	</>
 )
 
-const createStyles = (colors: ReturnType<typeof useAppTheme>['colors']) =>
-	StyleSheet.create({
-		content: {
-			paddingHorizontal: spacing.lg,
-			paddingTop: spacing.md,
-			paddingBottom: 150,
-		},
+const createStyles = (colors: ReturnType<typeof useAppTheme>['colors'], isDark: boolean) => {
+	/**
+	 * 会员卡上的字色：深色主题是深金底配浅金字，浅色主题是奶油金底配深褐字。
+	 * 之前不论主题都用浅金，浅色主题上等于白字压浅黄底，完全看不清。
+	 */
+	const goldStrong = isDark ? '#FBEBC0' : '#5A3E12'
+	const goldMid = isDark ? '#F2CC84' : '#7A5518'
+	const goldDim = isDark ? 'rgba(247,231,194,0.72)' : 'rgba(90,62,18,0.76)'
+	const goldFaint = isDark ? 'rgba(247,231,194,0.58)' : 'rgba(90,62,18,0.62)'
+	const goldTrack = isDark ? 'rgba(255,255,255,0.16)' : 'rgba(90,62,18,0.18)'
+	const goldRule = isDark ? 'rgba(246,228,178,0.22)' : 'rgba(90,62,18,0.20)'
+
+	return StyleSheet.create({
+	safe: {
+		flex: 1,
+	},
+	content: {
+		paddingHorizontal: spacing.lg,
+		paddingTop: spacing.sm,
+		paddingBottom: 150,
+	},
 		vipBorder: {
 			borderRadius: 22,
 			padding: 1.5,
@@ -465,61 +482,70 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>['colors']) =>
 			flex: 1,
 			marginRight: spacing.sm,
 		},
-		vipExpire: {
-			fontSize: 10.5,
-			color: 'rgba(246,228,178,0.66)',
-			letterSpacing: 0.1,
-		},
-		growthRow: {
-			flexDirection: 'row',
-			alignItems: 'center',
-			marginTop: spacing.sm,
-		},
-		growthTrack: {
-			flex: 1,
-			height: 6,
-			borderRadius: 3,
-			overflow: 'hidden',
-			backgroundColor: 'rgba(255,255,255,0.14)',
-		},
-		growthFill: {
-			height: '100%',
-			borderRadius: 3,
-		},
-		levelText: {
-			marginLeft: spacing.sm + 2,
-			fontSize: 11,
-			fontWeight: '700',
-			color: '#F2CC84',
-		},
-		growthCaption: {
-			marginTop: 6,
-			fontSize: 10,
-			color: 'rgba(246,228,178,0.54)',
-		},
-		vipStats: {
-			flexDirection: 'row',
-			marginTop: spacing.md - 1,
-			paddingTop: spacing.md - 1,
-			borderTopWidth: strokeWidth,
-			borderTopColor: 'rgba(246,228,178,0.20)',
-		},
-		vipStatCell: {
-			flex: 1,
-			alignItems: 'center',
-		},
-		vipStatValue: {
-			fontSize: 16,
-			fontWeight: '700',
-			letterSpacing: -0.3,
-			color: '#F3D79B',
-			fontVariant: ['tabular-nums'],
-		},
-		vipStatLabel: {
-			marginTop: 3,
-			fontSize: 10,
-			color: 'rgba(255,255,255,0.52)',
-		},
+	vipTitle: {
+		fontSize: 17,
+		fontWeight: '800',
+		letterSpacing: -0.2,
+		color: goldStrong,
+	},
+	vipExpire: {
+		fontSize: 11,
+		fontWeight: '600',
+		color: goldDim,
+		letterSpacing: 0.1,
+	},
+	growthRow: {
+		flexDirection: 'row',
+		alignItems: 'center',
+		marginTop: spacing.sm,
+	},
+	growthTrack: {
+		flex: 1,
+		height: 6,
+		borderRadius: 3,
+		overflow: 'hidden',
+		backgroundColor: goldTrack,
+	},
+	growthFill: {
+		height: '100%',
+		borderRadius: 3,
+	},
+	levelText: {
+		marginLeft: spacing.sm + 2,
+		fontSize: 11,
+		fontWeight: '700',
+		color: goldMid,
+	},
+	growthCaption: {
+		marginTop: 6,
+		fontSize: 10.5,
+		fontWeight: '500',
+		color: goldFaint,
+	},
+	vipStats: {
+		flexDirection: 'row',
+		marginTop: spacing.md - 1,
+		paddingTop: spacing.md - 1,
+		borderTopWidth: strokeWidth,
+		borderTopColor: goldRule,
+	},
+	vipStatCell: {
+		flex: 1,
+		alignItems: 'center',
+	},
+	vipStatValue: {
+		fontSize: 16,
+		fontWeight: '800',
+		letterSpacing: -0.3,
+		color: goldStrong,
+		fontVariant: ['tabular-nums'],
+	},
+	vipStatLabel: {
+		marginTop: 3,
+		fontSize: 10,
+		fontWeight: '500',
+		color: goldDim,
+	},
 		pillRow: {
 			flexDirection: 'row',
 			marginTop: spacing.md + 2,
@@ -631,4 +657,9 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>['colors']) =>
 			backgroundColor: colors.separator,
 			marginLeft: spacing.lg + 28 + spacing.md,
 		},
+		/** 睡眠定时 / 设置这一组，和上面的听歌画像拉开距离 */
+		toolCard: {
+			marginTop: spacing.md + 2,
+		},
 	})
+}

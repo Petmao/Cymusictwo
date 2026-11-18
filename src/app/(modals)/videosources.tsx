@@ -1,10 +1,11 @@
 import { GradientScreen } from '@/components/GradientScreen'
 import { radius, spacing, strokeWidth, typography } from '@/constants/tokens'
 import { useAppTheme } from '@/hooks/useAppTheme'
+import { fetchRemoteVideoSources, RemoteVideoSource } from '@/cloud/remoteConfig'
 import { addVideoSource, removeVideoSource, useVideoSources } from '@/store/videoSources'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 
 const VideoSourcesScreen = () => {
@@ -12,7 +13,21 @@ const VideoSourcesScreen = () => {
 	const sources = useVideoSources()
 	const [title, setTitle] = useState('')
 	const [url, setUrl] = useState('')
+	const [remote, setRemote] = useState<RemoteVideoSource[]>([])
 	const styles = useMemo(() => createStyles(colors), [colors])
+
+	// 后台下发的源只读，这里列出来是为了让用户知道「为什么视频页有我没加过的视频」
+	useEffect(() => {
+		let alive = true
+		fetchRemoteVideoSources()
+			.then((items) => {
+				if (alive) setRemote(items)
+			})
+			.catch(() => undefined)
+		return () => {
+			alive = false
+		}
+	}, [])
 
 	const handleAdd = () => {
 		try {
@@ -103,6 +118,33 @@ const VideoSourcesScreen = () => {
 				<Text style={styles.hint}>
 					只有 SVIP 能使用视频功能；地址需要是可直接播放的 mp4 / m3u8 直链，普通网页地址会显示「不可播」。
 				</Text>
+
+				{remote.length > 0 ? (
+					<>
+						<Text style={styles.label}>后台下发 · {remote.length}</Text>
+						<View style={styles.card}>
+							{remote.map((item, index) => (
+								<View key={item.id}>
+									{index > 0 ? <View style={styles.separator} /> : null}
+									<View style={styles.row}>
+										<View style={styles.rowText}>
+											<Text numberOfLines={1} style={styles.rowTitle}>
+												{item.title}
+											</Text>
+											<Text numberOfLines={1} style={styles.rowUrl}>
+												{item.url}
+											</Text>
+										</View>
+										<View style={[styles.remoteTag, { backgroundColor: gradients.glow }]}>
+											<Text style={styles.remoteTagText}>云端</Text>
+										</View>
+									</View>
+								</View>
+							))}
+						</View>
+						<Text style={styles.hint}>后台下发的源由服务器统一维护，本地不能删除。</Text>
+					</>
+				) : null}
 			</ScrollView>
 		</GradientScreen>
 	)
@@ -205,5 +247,16 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>['colors']) =>
 			fontSize: 11,
 			lineHeight: 17,
 			color: colors.textMuted,
+		},
+		remoteTag: {
+			paddingHorizontal: 7,
+			paddingVertical: 2,
+			borderRadius: radius.pill,
+		},
+		remoteTagText: {
+			fontSize: 9.5,
+			fontWeight: '700',
+			color: '#FFFFFF',
+			letterSpacing: 0.2,
 		},
 	})

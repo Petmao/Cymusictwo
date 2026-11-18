@@ -495,6 +495,10 @@ const SettingModal = () => {
 			title: i18n.t('settings.sections.qualitySelection'),
 			data: [{ id: '10', title: i18n.t('settings.items.currentQuality'), type: 'value' }],
 		},
+		{
+			title: '视频',
+			data: [{ id: '20', title: '视频源', type: 'link', value: '' }],
+		},
 	]
 	const importMusicSourceMenu = (
 		<MenuView
@@ -740,6 +744,8 @@ const SettingModal = () => {
 					}
 					if (item.id === '19') {
 						importApiSourceFromUrl()
+					} else if (item.id === '20') {
+						router.push('/(modals)/videosources')
 					} else if (item.type === 'link') {
 						if (item.title === i18n.t('settings.items.clearPlaylist')) {
 							Alert.alert(

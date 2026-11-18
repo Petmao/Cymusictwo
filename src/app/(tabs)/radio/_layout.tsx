@@ -1,22 +1,22 @@
 import { getStackScreenWithSearchBar } from '@/constants/layout'
-import { useThemeColors } from '@/hooks/useAppTheme'
+import { useAppTheme } from '@/hooks/useAppTheme'
 import { useDefaultStyles } from '@/styles'
-import i18n, { nowLanguage } from '@/utils/i18n'
+import { nowLanguage } from '@/utils/i18n'
 import { Stack } from 'expo-router'
 import { View } from 'react-native'
+
 const RadiolistsScreenLayout = () => {
 	const language = nowLanguage.useValue()
-	const colors = useThemeColors()
+	const { colors, gradients } = useAppTheme()
 	const defaultStyles = useDefaultStyles()
+
 	return (
 		<View style={defaultStyles.container} key={language}>
 			<Stack>
 				<Stack.Screen
 					name="index"
 					options={{
-						...getStackScreenWithSearchBar(colors),
-						headerLargeTitle: false,
-						headerTitle: '',
+						...getStackScreenWithSearchBar(colors, gradients.screen[0]),
 					}}
 				/>
 				<Stack.Screen
@@ -25,7 +25,7 @@ const RadiolistsScreenLayout = () => {
 						headerTitle: '',
 						headerBackVisible: true,
 						headerStyle: {
-							backgroundColor: colors.background,
+							backgroundColor: gradients.screen[0],
 						},
 						headerTintColor: colors.primary,
 					}}

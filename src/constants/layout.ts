@@ -2,30 +2,29 @@ import { NativeStackNavigationOptions } from '@react-navigation/native-stack'
 import { ThemeColors } from './tokens'
 
 /**
- * 统一的大标题导航栏：34pt 大标题、无阴影、无返回文字，返回按钮走强调色。
- * 大标题字距按 iOS 规范收到 0.37，比默认更紧致。
+ * 统一的页面导航栏：没有大标题、没有阴影、背景色跟页面渐变顶部完全一致。
+ *
+ * 之前用 headerLargeTitle + colors.background，浅色主题下会在渐变页面上
+ * 露出一条奶油色横条（看着像「白框」）。现在把 headerColor 传成
+ * gradients.screen[0]，导航条和页面第一段渐变是同一个颜色，接缝看不出来。
  */
 export const getStackScreenWithSearchBar = (
 	colors: ThemeColors,
+	headerColor?: string,
 ): NativeStackNavigationOptions => ({
-	headerLargeTitle: true,
+	headerLargeTitle: false,
 	headerLargeTitleShadowVisible: false,
-	headerLargeTitleStyle: {
-		color: colors.text,
-		fontSize: 34,
-		fontWeight: '700',
-		letterSpacing: 0.37,
-	},
+	headerTitle: '',
 	headerTitleStyle: {
 		color: colors.text,
 		fontSize: 17,
 		fontWeight: '600',
 	},
 	headerStyle: {
-		backgroundColor: colors.background,
+		backgroundColor: headerColor ?? colors.background,
 	},
 	headerLargeStyle: {
-		backgroundColor: colors.background,
+		backgroundColor: headerColor ?? colors.background,
 	},
 	headerTintColor: colors.primary,
 	headerShadowVisible: false,

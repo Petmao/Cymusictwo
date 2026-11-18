@@ -1,18 +1,21 @@
-import { useVideoSources } from '@/store/videoSources'
+import { useAllVideoSources } from '@/hooks/useAllVideoSources'
 import { Ionicons } from '@expo/vector-icons'
 import { AVPlaybackStatus, ResizeMode, Video } from 'expo-av'
 import { router, useLocalSearchParams } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Animated, PanResponder, StyleSheet, Text, View } from 'react-native'
+import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native'
 
 /**
- * 纯全屏视频：没有任何浮层。
- * 上滑下一条、下滑上一条、单击暂停/继续，位移带 0.35 阻尼，松手回弹。
+ * 纯全屏视频：上滑下一条、下滑上一条、单击暂停/继续。
+ *
+ * 手势必须是「捕获阶段」拿：Video 是原生视图，普通 onMoveShouldSetPanResponder
+ * 会被它先吃掉，表现就是怎么滑都不切视频。所以用 onMoveShouldSetPanResponderCapture，
+ * 再用一层透明 Pressable 接单击。
  */
 const VideoPlayerScreen = () => {
 	const params = useLocalSearchParams<{ id?: string }>()
-	const sources = useVideoSources()
+	const { list: sources } = useAllVideoSources()
 
 	const initialIndex = useMemo(() => {
 		const index = sources.findIndex((item) => item.id === params.id)
@@ -35,31 +38,32 @@ const VideoPlayerScreen = () => {
 		indexRef.current = index
 	}, [index])
 
-	const switchTo = useCallback(
-		(delta: number) => {
-			const total = sourcesRef.current.length
-			if (total <= 1) return
-			const next = (indexRef.current + delta + total) % total
-			setFailed(false)
-			setPaused(false)
-			setIndex(next)
-		},
-		[],
-	)
+	const switchTo = useCallback((delta: number) => {
+		const total = sourcesRef.current.length
+		if (total <= 1) return
+		const next = (indexRef.current + delta + total) % total
+		setFailed(false)
+		setPaused(false)
+		setIndex(next)
+	}, [])
 
 	const panResponder = useMemo(
 		() =>
 			PanResponder.create({
-				onMoveShouldSetPanResponder: (_event, gesture) =>
-					Math.abs(gesture.dy) > 12 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+				// 捕获阶段，先于 Video 原生视图拿到手势
+				onStartShouldSetPanResponderCapture: () => false,
+				onMoveShouldSetPanResponderCapture: (_event, gesture) =>
+					Math.abs(gesture.dy) > 10 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
 				onPanResponderMove: (_event, gesture) => {
 					offset.setValue(gesture.dy * 0.35)
 				},
+				onPanResponderTerminationRequest: () => false,
 				onPanResponderRelease: (_event, gesture) => {
-					if (gesture.dy < -60) {
+					const threshold = 50
+					if (gesture.dy < -threshold) {
 						Animated.timing(offset, {
-							toValue: -120,
-							duration: 160,
+							toValue: -140,
+							duration: 150,
 							useNativeDriver: true,
 						}).start(() => {
 							offset.setValue(0)
@@ -67,10 +71,10 @@ const VideoPlayerScreen = () => {
 						})
 						return
 					}
-					if (gesture.dy > 60) {
+					if (gesture.dy > threshold) {
 						Animated.timing(offset, {
-							toValue: 120,
-							duration: 160,
+							toValue: 140,
+							duration: 150,
 							useNativeDriver: true,
 						}).start(() => {
 							offset.setValue(0)
@@ -80,7 +84,7 @@ const VideoPlayerScreen = () => {
 					}
 					Animated.timing(offset, {
 						toValue: 0,
-						duration: 200,
+						duration: 180,
 						useNativeDriver: true,
 					}).start()
 				},
@@ -93,12 +97,16 @@ const VideoPlayerScreen = () => {
 	const handlePress = useCallback(async () => {
 		const video = videoRef.current
 		if (!video) return
-		if (paused) {
-			await video.playAsync()
-			setPaused(false)
-		} else {
-			await video.pauseAsync()
-			setPaused(true)
+		try {
+			if (paused) {
+				await video.playAsync()
+				setPaused(false)
+			} else {
+				await video.pauseAsync()
+				setPaused(true)
+			}
+		} catch {
+			// 播放器还没准备好，忽略
 		}
 	}, [paused])
 
@@ -139,7 +147,6 @@ const VideoPlayerScreen = () => {
 						progressUpdateIntervalMillis={1000}
 						onPlaybackStatusUpdate={handleStatus}
 						onError={() => setFailed(true)}
-						onPress={handlePress}
 					/>
 				) : (
 					<View style={styles.fallback}>
@@ -150,6 +157,22 @@ const VideoPlayerScreen = () => {
 						<Text style={styles.fallbackHint}>这条地址不是可播视频</Text>
 					</View>
 				)}
+
+				{/* 透明层接单击：播放/暂停 */}
+				<Pressable style={StyleSheet.absoluteFill} onPress={handlePress} />
+
+				{current ? (
+					<View style={styles.caption} pointerEvents="none">
+						<Text style={styles.captionText} numberOfLines={1}>
+							{current.title}
+						</Text>
+						{sources.length > 1 ? (
+							<Text style={styles.captionIndex}>
+								{index + 1} / {sources.length}
+							</Text>
+						) : null}
+					</View>
+				) : null}
 			</Animated.View>
 		</View>
 	)
@@ -178,5 +201,25 @@ const styles = StyleSheet.create({
 		marginTop: 10,
 		fontSize: 10.5,
 		color: 'rgba(255,255,255,0.35)',
+	},
+	caption: {
+		position: 'absolute',
+		left: 18,
+		right: 18,
+		bottom: 34,
+		flexDirection: 'row',
+		alignItems: 'center',
+		justifyContent: 'space-between',
+	},
+	captionText: {
+		flex: 1,
+		marginRight: 12,
+		fontSize: 13,
+		fontWeight: '600',
+		color: 'rgba(255,255,255,0.88)',
+	},
+	captionIndex: {
+		fontSize: 11,
+		color: 'rgba(255,255,255,0.45)',
 	},
 })
