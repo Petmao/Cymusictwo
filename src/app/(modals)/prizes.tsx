@@ -3,6 +3,7 @@ import {
 	isSvipProfile,
 	listPrizes,
 	Prize,
+	prizeValueText,
 	redeemPrize,
 	useCloud,
 } from '@/cloud'
@@ -26,8 +27,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 /**
- * 积分兑换。奖品清单来自服务端 prizes 表，兑换走 redeem_prize RPC。
- * 没建表 / 没数据时显示空态，不会崩也不会卡住。
+ * 积分兑换。奖品来自服务端 list_rewards()，下单走 redeem_reward(p_reward_id)。
+ * 奖品内容在后台「积分商城」里增删改，App 只读不写。
  */
 const PrizesScreen = () => {
 	const { colors, gradients } = useAppTheme()
@@ -39,6 +40,7 @@ const PrizesScreen = () => {
 	const refreshProfile = useCloud((s) => s.refreshProfile)
 
 	const [prizes, setPrizes] = useState<Prize[]>([])
+	const [storeOpen, setStoreOpen] = useState(true)
 	const [loading, setLoading] = useState(true)
 	const [refreshing, setRefreshing] = useState(false)
 	const [busyId, setBusyId] = useState<string | null>(null)
@@ -47,8 +49,9 @@ const PrizesScreen = () => {
 	const isSvip = isSvipProfile(profile)
 
 	const load = useCallback(async () => {
-		const items = await listPrizes()
-		setPrizes(items)
+		const store = await listPrizes()
+		setPrizes(store.items)
+		setStoreOpen(store.enabled)
 	}, [])
 
 	useEffect(() => {
@@ -75,7 +78,7 @@ const PrizesScreen = () => {
 			])
 			return
 		}
-		if (prize.stock <= 0) {
+		if (prize.stock === 0) {
 			showToast('这件已经被兑完了')
 			return
 		}
@@ -83,19 +86,24 @@ const PrizesScreen = () => {
 			showToast(`还差 ${prize.cost - points} 积分`)
 			return
 		}
-		Alert.alert('确认兑换', `用 ${prize.cost} 积分兑换「${prize.title}」？`, [
+		Alert.alert('确认兑换', `用 ${prize.cost} 积分兑换「${prize.name}」？`, [
 			{ text: '再想想', style: 'cancel' },
 			{
 				text: '兑换',
 				onPress: async () => {
-					setBusyId(prize.id)
+					const key = String(prize.id)
+					setBusyId(key)
 					const result = await redeemPrize(prize.id)
 					setBusyId(null)
 					if (!result.ok) {
-						Alert.alert('兑换失败', describeRedeemReason((result as { reason?: string }).reason))
+						Alert.alert('兑换失败', describeRedeemReason(result as { reason?: string; short?: number }))
 						return
 					}
-					showToast(`已兑换「${result.title}」，剩余 ${result.points} 积分`)
+					if (result.code) {
+						Alert.alert('兑换成功', `你的卡密：${result.code}\n先记下来，丢了不补`)
+					} else {
+						showToast(`已兑换「${result.title ?? prize.name}」，剩余 ${result.points ?? 0} 积分`)
+					}
 					await Promise.all([load(), refreshProfile().catch(() => undefined)])
 				},
 			},
@@ -146,53 +154,55 @@ const PrizesScreen = () => {
 				) : prizes.length === 0 ? (
 					<View style={styles.emptyBox}>
 						<Ionicons name="gift-outline" size={30} color={colors.textMuted} />
-						<Text style={styles.emptyTitle}>暂无可兑换奖品</Text>
-						<Text style={styles.emptyHint}>奖品由云端配置，上架后会出现在这里</Text>
+						<Text style={styles.emptyTitle}>
+							{storeOpen ? '暂无可兑换奖品' : '积分商城暂时关闭'}
+						</Text>
+						<Text style={styles.emptyHint}>
+							{storeOpen ? '奖品由后台配置，上架后会出现在这里' : '后台打开商城后就能看到奖品'}
+						</Text>
 					</View>
 				) : (
 					prizes.map((prize) => {
+						const key = String(prize.id)
+						const soldOut = prize.stock === 0
 						const affordable = points >= prize.cost
-						const soldOut = prize.stock <= 0
 						return (
-							<View key={prize.id} style={styles.card}>
+							<View key={key} style={styles.card}>
 								<View style={styles.cardMain}>
-									<Text style={styles.cardTitle}>{prize.title}</Text>
-									{prize.description ? (
-										<Text style={styles.cardDesc} numberOfLines={2}>
-											{prize.description}
-										</Text>
-									) : null}
+									<Text style={styles.cardTitle}>{prize.name}</Text>
+									<Text style={styles.cardDesc} numberOfLines={2}>
+										{prizeValueText(prize)}
+									</Text>
 									<View style={styles.metaRow}>
 										<Text style={styles.cost}>{prize.cost} 积分</Text>
 										<Text style={styles.stock}>
-											{soldOut ? '已兑完' : `剩 ${prize.stock}`}
+											{soldOut
+												? '已兑完'
+												: prize.stock < 0
+													? '不限量'
+													: `剩 ${prize.stock}`}
+											{prize.perUserLimit > 0 ? ` · 每人限 ${prize.perUserLimit}` : ''}
 										</Text>
 									</View>
 								</View>
 								<TouchableOpacity
 									activeOpacity={0.85}
-									disabled={soldOut || busyId === prize.id}
+									disabled={soldOut || busyId === key}
 									onPress={() => handleRedeem(prize)}
 								>
 									<View
 										style={[
 											styles.redeemBtn,
-											{
-												backgroundColor: soldOut
-													? colors.surfaceMuted
-													: affordable
-														? colors.primary
-														: colors.surfaceMuted,
-											},
+											{ backgroundColor: affordable && !soldOut ? colors.primary : colors.surfaceMuted },
 										]}
 									>
-										{busyId === prize.id ? (
+										{busyId === key ? (
 											<ActivityIndicator size="small" color="#fff" />
 										) : (
 											<Text
 												style={[
 													styles.redeemText,
-													{ color: soldOut || !affordable ? colors.textMuted : '#FFFFFF' },
+													{ color: affordable && !soldOut ? '#FFFFFF' : colors.textMuted },
 												]}
 											>
 												{soldOut ? '已兑完' : '兑换'}
@@ -206,7 +216,7 @@ const PrizesScreen = () => {
 				)}
 
 				<Text style={styles.footnote}>
-					兑换成功后积分立即扣除，实物/权益由管理员在后台核销；签到、邀请好友都能拿积分。
+					兑换后积分立即扣除；SVIP 天数、成长值自动到账，卡密会直接显示。签到、邀请好友都能拿积分。
 				</Text>
 			</ScrollView>
 		</GradientScreen>

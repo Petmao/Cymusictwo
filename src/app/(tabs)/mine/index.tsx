@@ -342,6 +342,15 @@ const MineScreen = () => {
 					/>
 					<View style={styles.separator} />
 					<Row
+						icon="albums-outline"
+						label="我的歌单"
+						value={`${playLists.length} 个`}
+						onPress={() => router.push('/(tabs)/favorites' as never)}
+						styles={styles}
+						chevronColor={colors.textMuted}
+					/>
+					<View style={styles.separator} />
+					<Row
 						icon="download"
 						label="本地缓存"
 						value={`${localTracks.length} 首`}

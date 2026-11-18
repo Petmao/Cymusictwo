@@ -25,8 +25,10 @@ export { pullOnly, syncNow, type SyncResult } from './sync'
 export {
 	describeRedeemReason,
 	listPrizes,
+	prizeValueText,
 	redeemPrize,
 	type Prize,
+	type PrizeStore,
 	type RedeemResult,
 } from './prizes'
 export {

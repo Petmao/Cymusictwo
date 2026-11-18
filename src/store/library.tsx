@@ -5,6 +5,7 @@ import { Track } from 'react-native-track-player'
 import { create } from 'zustand'
 
 import { getTopLists } from '@/helpers/userApi/getMusicSource'
+import getOrCreateMMKV from '@/store/getOrCreateMMKV'
 import PersistStatus from '@/store/PersistStatus'
 
 interface LibraryState {
@@ -234,4 +235,18 @@ export const usePlaylists = () => {
 }
 export const useTracksLoading = () => {
 	return useLibraryStore((state) => state.isLoading)
+}
+
+/**
+ * 收藏同样要跟着磁盘走：云同步拉取直接写 MMKV，zustand 里的 favorites
+ * 只在创建 store 时读过一次，不重建就一直显示旧数据。
+ */
+try {
+	getOrCreateMMKV('appPersistStatus').addOnValueChangedListener((changedKey) => {
+		if (changedKey !== 'music.favorites') return
+		const next = PersistStatus.get('music.favorites') ?? []
+		useLibraryStore.setState({ favorites: next as any })
+	})
+} catch {
+	// ignore
 }

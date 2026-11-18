@@ -1,4 +1,6 @@
 import { MusicRepeatMode } from '@/helpers/types'
+import getOrCreateMMKV from '@/store/getOrCreateMMKV'
+import PersistStatus from '@/store/PersistStatus'
 import { GlobalState } from '@/utils/stateMapper'
 
 /** 当前播放 */
@@ -29,3 +31,20 @@ export const nowLyricState = new GlobalState<string>(null)
 export const trackSkipLoadingStore = new GlobalState<'next' | 'previous' | null>(null)
 /** 当前曲目音源解析中 */
 export const trackSourceLoadingStore = new GlobalState<string | null>(null)
+
+/**
+ * 歌单内存态跟着磁盘走。
+ *
+ * 云同步拉取是直接 PersistStatus.set('music.playLists', …) 写 MMKV 的，
+ * 而 playListsStore 只是个内存对象，不监听磁盘，所以拉下来的歌单
+ * 要等重启才出现。这里补一个监听：谁写盘都回灌到内存。
+ */
+try {
+	getOrCreateMMKV('appPersistStatus').addOnValueChangedListener((changedKey) => {
+		if (changedKey !== 'music.playLists') return
+		const next = PersistStatus.get('music.playLists') ?? []
+		playListsStore.setValue(next as any)
+	})
+} catch {
+	// 监听装不上不影响主流程
+}
