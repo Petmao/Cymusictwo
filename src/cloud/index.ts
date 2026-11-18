@@ -23,6 +23,13 @@ export {
 } from './device'
 export { pullOnly, syncNow, type SyncResult } from './sync'
 export {
+	describeRedeemReason,
+	listPrizes,
+	redeemPrize,
+	type Prize,
+	type RedeemResult,
+} from './prizes'
+export {
 	GROWTH_PER_LEVEL,
 	MAX_LEVEL,
 	formatSvipExpire,

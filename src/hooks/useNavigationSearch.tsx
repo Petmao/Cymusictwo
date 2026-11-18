@@ -28,10 +28,10 @@ export const useNavigationSearch = ({
 	const navigation = useNavigation()
 	const language = nowLanguage.useValue()
 	const colors = useThemeColors()
-	const { gradients, isDark } = useAppTheme()
-	/** 导航条底色 = 页面渐变第一段，搜索框背后的横条就不会是另一块颜色 */
-	const barColor = gradients.screen[0]
-	/** 输入框本体：浅色主题给半透明白玻璃，深色给半透明白，都不抢渐变的色 */
+	const { isDark } = useAppTheme()
+	/** 搜索条完全透明：底下就是页面渐变，颜色天生一致 */
+	const barColor = 'transparent'
+	/** 输入框本体：浅色主题半透明白玻璃，深色半透明白 */
 	const fieldColor = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.72)'
 
 	const defaultSearchOptions = useMemo<SearchBarProps>(

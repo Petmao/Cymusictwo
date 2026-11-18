@@ -19,12 +19,12 @@ import {
 	FlatList,
 	Platform,
 	Pressable,
-	SafeAreaView,
 	StyleSheet,
 	Text,
 	View,
 } from 'react-native'
 import { Track } from 'react-native-track-player'
+import { useHeaderHeight } from '@react-navigation/elements'
 
 type SearchType = 'songs' | 'artists'
 
@@ -60,6 +60,7 @@ const SearchlistsScreen = () => {
 	const slideAnim = useRef(
 		new Animated.Value(lastSearchSession?.type === 'artists' ? SEGMENT_WIDTH : 0),
 	).current
+	const headerHeight = useHeaderHeight()
 	const contentOffsetAnim = useRef(new Animated.Value(0)).current
 
 	const handleSearchFocus = useCallback(() => {
@@ -230,7 +231,7 @@ const SearchlistsScreen = () => {
 
 	return (
 		<GradientScreen>
-			<SafeAreaView style={styles.safeArea}>
+			<View style={[styles.safeArea, { paddingTop: headerHeight }]}>
 			<Animated.View
 				style={[
 					styles.contentContainer,
@@ -329,7 +330,7 @@ const SearchlistsScreen = () => {
 					</View>
 				)}
 			</Animated.View>
-			</SafeAreaView>
+			</View>
 		</GradientScreen>
 	)
 }

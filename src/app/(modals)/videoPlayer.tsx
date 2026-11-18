@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
 /**
  * 纯全屏视频：上滑下一条、下滑上一条、单击暂停/继续。
@@ -15,7 +16,8 @@ import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from 'react
  */
 const VideoPlayerScreen = () => {
 	const params = useLocalSearchParams<{ id?: string }>()
-	const { list: sources } = useAllVideoSources()
+	const insets = useSafeAreaInsets()
+	const { list: sources, loading } = useAllVideoSources()
 
 	const initialIndex = useMemo(() => {
 		const index = sources.findIndex((item) => item.id === params.id)
@@ -122,10 +124,12 @@ const VideoPlayerScreen = () => {
 	)
 
 	useEffect(() => {
+		// 还在拉云端源的时候 sources 必然是空的，这时候直接 back 会把用户弹出去
+		if (loading) return
 		if (!current && sources.length === 0) {
 			router.back()
 		}
-	}, [current, sources.length])
+	}, [current, sources.length, loading])
 
 	return (
 		<View style={styles.root}>
@@ -160,6 +164,11 @@ const VideoPlayerScreen = () => {
 
 				{/* 透明层接单击：播放/暂停 */}
 				<Pressable style={StyleSheet.absoluteFill} onPress={handlePress} />
+
+				{/* 返回：之前没有出口，进了视频就退不出去 */}
+				<Pressable style={[styles.backBtn, { top: insets.top + 8 }]} onPress={() => router.back()}>
+					<Ionicons name="chevron-down" size={22} color="rgba(255,255,255,0.92)" />
+				</Pressable>
 
 				{current ? (
 					<View style={styles.caption} pointerEvents="none">
@@ -201,6 +210,16 @@ const styles = StyleSheet.create({
 		marginTop: 10,
 		fontSize: 10.5,
 		color: 'rgba(255,255,255,0.35)',
+	},
+	backBtn: {
+		position: 'absolute',
+		left: 14,
+		width: 40,
+		height: 40,
+		borderRadius: 20,
+		alignItems: 'center',
+		justifyContent: 'center',
+		backgroundColor: 'rgba(0,0,0,0.32)',
 	},
 	caption: {
 		position: 'absolute',

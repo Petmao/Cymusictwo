@@ -19,7 +19,8 @@ export type RemoteVideoSource = {
 	remote: true
 }
 
-const CACHE_TTL = 5 * 60 * 1000
+/** 缓存只留 20 秒：后台改完回到前台就该看到新的，不该逼用户重启 */
+const CACHE_TTL = 20 * 1000
 let cache: { at: number; items: RemoteVideoSource[] } | null = null
 
 const pickArray = (cfg: unknown): any[] => {

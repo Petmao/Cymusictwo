@@ -3,6 +3,7 @@ import { playbackService } from '@/constants/playbackService'
 import { AppThemeProvider, useAppTheme } from '@/hooks/useAppTheme'
 import LyricManager from '@/helpers/lyricManager'
 import { breadcrumb, recordFatal } from '@/helpers/crashLog'
+import { LaunchSplash } from '@/components/LaunchSplash'
 import { useLogTrackPlayerState } from '@/hooks/useLogTrackPlayerState'
 import { useSetupTrackPlayer } from '@/hooks/useSetupTrackPlayer'
 import i18n, { setI18nConfig } from '@/utils/i18n'
@@ -159,6 +160,8 @@ const ThemedAppShell = () => {	const { colors, statusBarStyle } = useAppTheme()
 				<RootNavigation />
 				<StatusBar style={statusBarStyle} />
 				<Toast config={toastConfig} />
+				{/* 启动图：从服务器 /img/ 随机取一张，拿不到就不显示 */}
+				<LaunchSplash />
 			</GestureHandlerRootView>
 		</SafeAreaProvider>
 	)
@@ -263,9 +266,19 @@ const RootNavigation = () => {
 				options={{
 					presentation: 'fullScreenModal',
 					headerShown: false,
-					gestureEnabled: false,
+					gestureEnabled: true,
+					gestureDirection: 'vertical',
 					animation: 'fade',
 					contentStyle: { backgroundColor: '#000000' },
+				}}
+			/>
+			<Stack.Screen
+				name="(modals)/prizes"
+				options={{
+					presentation: 'modal',
+					headerShown: false,
+					gestureEnabled: true,
+					gestureDirection: 'vertical',
 				}}
 			/>
 			<Stack.Screen

@@ -7,7 +7,7 @@ import {
 	useCloud,
 } from '@/cloud'
 import { registerCurrentDevice } from '@/cloud/device'
-import { syncNow } from '@/cloud/sync'
+import { pullOnly, syncNow } from '@/cloud/sync'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import { useEffect, useMemo, useState } from 'react'
@@ -57,14 +57,42 @@ const AccountScreen = () => {
 		})
 	}, [loggedIn])
 
+	/** 云同步是 SVIP 权益，普通账号只能本地用 */
+	const requireSvipForSync = () => {
+		if (isSvip) return true
+		Alert.alert('SVIP 专属', '云同步需要开通 SVIP，开通后收藏和歌单才能备份到云端。', [
+			{ text: '知道了', style: 'cancel' },
+		])
+		return false
+	}
+
 	const handleSync = async () => {
 		if (!session?.user) return
+		if (!requireSvipForSync()) return
 		setSyncing(true)
 		setSyncTip(null)
 		try {
 			const result = await syncNow(session.user.id)
 			setSyncTip(
 				`已同步：收藏 ${result.favorites.total} 首（新增 ${result.favorites.added}）· 歌单 ${result.playlists.total} 个（新增 ${result.playlists.addedPlaylists}）`,
+			)
+		} catch (err) {
+			setSyncTip(err instanceof Error ? err.message : String(err))
+		} finally {
+			setSyncing(false)
+		}
+	}
+
+	/** 换设备登录后，把云端拉回本地 */
+	const handlePull = async () => {
+		if (!session?.user) return
+		if (!requireSvipForSync()) return
+		setSyncing(true)
+		setSyncTip(null)
+		try {
+			const result = await pullOnly(session.user.id)
+			setSyncTip(
+				`已拉取：收藏 ${result.favorites.total} 首（新增 ${result.favorites.added}）· 歌单 ${result.playlists.total} 个（新增 ${result.playlists.addedPlaylists}）`,
 			)
 		} catch (err) {
 			setSyncTip(err instanceof Error ? err.message : String(err))
@@ -239,6 +267,16 @@ const AccountScreen = () => {
 							<Pressable style={styles.actionRow} onPress={handleSync} disabled={syncing}>
 								<Ionicons name="cloud-upload-outline" size={18} color={colors.primary} />
 								<Text style={styles.actionText}>一键同步到云端</Text>
+								{!isSvip ? <Text style={styles.lockTag}>SVIP</Text> : null}
+								{syncing ? <ActivityIndicator size="small" /> : <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />}
+							</Pressable>
+
+							<View style={styles.divider} />
+
+							<Pressable style={styles.actionRow} onPress={handlePull} disabled={syncing}>
+								<Ionicons name="cloud-download-outline" size={18} color={colors.primary} />
+								<Text style={styles.actionText}>从云端拉取到本地</Text>
+								{!isSvip ? <Text style={styles.lockTag}>SVIP</Text> : null}
 								{syncing ? <ActivityIndicator size="small" /> : <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />}
 							</Pressable>
 							{syncTip ? <Text style={styles.syncTip}>{syncTip}</Text> : null}
@@ -394,6 +432,17 @@ const createStyles = (colors: ThemeColors) =>
 		actionText: { flex: 1, color: colors.text, fontSize: 15 },
 		errorText: { marginTop: 10, marginHorizontal: 16, fontSize: 12, color: colors.error },
 		syncTip: { color: colors.textMuted, fontSize: 12, marginTop: 6, lineHeight: 18 },
+		lockTag: {
+			fontSize: 9.5,
+			fontWeight: '700',
+			color: '#D9A64B',
+			borderWidth: StyleSheet.hairlineWidth,
+			borderColor: 'rgba(217,166,75,0.55)',
+			paddingHorizontal: 6,
+			paddingVertical: 1.5,
+			borderRadius: 999,
+			marginRight: 6,
+		},
 		divider: {
 			height: StyleSheet.hairlineWidth,
 			backgroundColor: colors.separator,

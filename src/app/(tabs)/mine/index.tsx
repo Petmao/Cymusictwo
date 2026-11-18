@@ -381,6 +381,15 @@ const MineScreen = () => {
 					style={[styles.groupCard, styles.toolCard]}
 				>
 					<Row
+						icon="gift-outline"
+						label="积分兑换"
+						value={`${points} 积分`}
+						onPress={() => router.push('/(modals)/prizes' as never)}
+						styles={styles}
+						chevronColor={colors.textMuted}
+					/>
+					<View style={styles.separator} />
+					<Row
 						icon="moon"
 						label="睡眠定时"
 						value={sleep.label}

@@ -103,9 +103,16 @@ const VideoScreen = () => {
 											</View>
 										) : null}
 									</View>
-									<Text numberOfLines={1} style={[styles.cardUrl, { color: colors.textMuted }]}>
-										{item.url}
-									</Text>
+									{/* 云端源不露地址，避免被拿去私自对接 */}
+									{item.remote ? (
+										<Text numberOfLines={1} style={[styles.cardUrl, { color: colors.textMuted }]}>
+											由服务器提供
+										</Text>
+									) : (
+										<Text numberOfLines={1} style={[styles.cardUrl, { color: colors.textMuted }]}>
+											{item.url}
+										</Text>
+									)}
 								</View>
 								<Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
 							</View>

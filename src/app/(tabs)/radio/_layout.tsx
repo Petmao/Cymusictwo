@@ -24,6 +24,7 @@ const RadiolistsScreenLayout = () => {
 					options={{
 						headerTitle: '',
 						headerBackVisible: true,
+						headerTransparent: false,
 						headerStyle: {
 							backgroundColor: gradients.screen[0],
 						},

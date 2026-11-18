@@ -25,6 +25,7 @@ const PlaylistsScreenLayout = () => {
 					options={{
 						headerTitle: '',
 						headerBackVisible: true,
+						headerTransparent: false,
 						headerStyle: {
 							backgroundColor: gradients.screen[0],
 						},

@@ -5,14 +5,15 @@ import { playlistNameFilter } from '@/helpers/filter'
 import { Playlist } from '@/helpers/types'
 import { useNavigationSearch } from '@/hooks/useNavigationSearch'
 import { usePlaylists } from '@/store/library'
-import { useDefaultStyles } from '@/styles'
 import i18n from '@/utils/i18n'
+import { useHeaderHeight } from '@react-navigation/elements'
 import { useRouter } from 'expo-router'
 import { useMemo } from 'react'
-import { ScrollView, View } from 'react-native'
+import { ScrollView } from 'react-native'
+
 const RadiolistsScreen = () => {
-	const defaultStyles = useDefaultStyles()
 	const router = useRouter()
+	const headerHeight = useHeaderHeight()
 
 	const search = useNavigationSearch({
 		searchBarOptions: {
@@ -33,10 +34,13 @@ const RadiolistsScreen = () => {
 
 	return (
 		<GradientScreen>
+			{/* 导航条透明，顶部留白自己补，否则第一张卡会钻到搜索框底下 */}
 			<ScrollView
-				contentInsetAdjustmentBehavior="automatic"
-				style={{
+				contentInsetAdjustmentBehavior="never"
+				contentContainerStyle={{
+					paddingTop: headerHeight,
 					paddingHorizontal: screenPadding.horizontal,
+					paddingBottom: 160,
 				}}
 			>
 				<RadioList
